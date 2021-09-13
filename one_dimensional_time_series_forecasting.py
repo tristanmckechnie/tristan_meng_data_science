@@ -352,3 +352,26 @@ class time_series_prediction():
         ax.tick_params(rotation=30) 
         ax.set_title('Test traing split')
         plt.tight_layout()
+
+    # method to tabulate all results together nicely
+    def results(self):
+        df_results = pd.DataFrame(columns=['date','Value','Linear','SVM','NN','Naive'])
+        df_results['date'] = self.time_series_dates
+        df_results['Value'] = self.one_d_time_series
+        
+        # set all values before prediction start to zero
+        zeros = [0 for i in range(0,self.training_split+self.lag_window_length)]
+
+        # append prediction results
+        linear_predictions = np.append(zeros,self.linear_reg_predictions)
+        svm_predictions = np.append(zeros,self.svm_predictions)
+        nn_predictions = np.append(zeros,self.neural_net_predictions)
+        naive_predictions = np.append(zeros,self.naive_predictions)
+
+        # save predictions to df
+        df_results['Linear'] = linear_predictions
+        df_results['SVM'] = svm_predictions
+        df_results['NN'] = nn_predictions
+        df_results['Naive'] = naive_predictions
+        
+        return df_results
