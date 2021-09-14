@@ -6,6 +6,8 @@ import numpy as np
 # model evalution metrics
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score
 
 # data preprocessing
 from sklearn.preprocessing import normalize
@@ -360,7 +362,7 @@ class time_series_prediction():
         df_results['Value'] = self.one_d_time_series
         
         # set all values before prediction start to zero
-        zeros = [0 for i in range(0,self.training_split+self.lag_window_length)]
+        zeros = [None for i in range(0,self.training_split+self.lag_window_length)]
 
         # append prediction results
         linear_predictions = np.append(zeros,self.linear_reg_predictions)
@@ -375,3 +377,29 @@ class time_series_prediction():
         df_results['Naive'] = naive_predictions
         
         return df_results
+
+# this function determines whether predictions determine the correct movement for tomorrow.
+def hit_rate(dates,original_values, predictions): # pass lists / arrays of dates, original values, and predictions
+    # initialise dataframe
+    df = pd.DataFrame(columns=['Date','Original Value','Daily PCT','Movement','Prediction','Predicted Movement'])
+
+    # add known data as passed to function
+    df['Date'] = dates.to_list()
+    df['Original Value'] = original_values.to_list()
+    df['Prediction'] = predictions.to_list()
+
+    # determine actually movement from time t to t+1 and predicted movement
+    df['Daily PCT'] = df['Original Value'].pct_change() # percentange change between t and t+1
+    df['Movement'] = df['Daily PCT'].apply(lambda x: 1 if x > 0 else 0)
+    df['Predicted Movement'] = df['Prediction'].pct_change().apply(lambda x: 1 if x > 0 else 0)
+
+    # calculate classification evaluation metrics
+    y_true = df['Movement']
+    y_pred = df['Predicted Movement']
+    matrix = confusion_matrix(y_true,y_pred)
+    accuracy = accuracy_score(y_true,y_pred)
+
+    # display eval metrics
+    print(f'Movement prediction accuracy: {round(accuracy*100,2)} %')
+    print(f'Confusion matrix:\n{matrix}')
+    return df
