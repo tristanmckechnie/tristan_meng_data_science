@@ -67,7 +67,7 @@ class time_series_prediction():
     def sliding_window_1(self,verbose):
         # initialize input array
         num_rows = len(self.one_d_time_series) - self.lag_window_length
-        array = np.zeros((num_rows, self.lag_window_length + 1))
+        array = np.zeros((num_rows, self.lag_window_length + 1)) # +1 for the target variable
         
         # loop through data and populate array
         for i in range(num_rows):
@@ -88,10 +88,10 @@ class time_series_prediction():
     def train_test_split(self,split):
         # sequentially splits data for testing and training
         self.training_split = split
-        self.X_train = self.input_data[0:split,:]
-        self.X_test = self.input_data[split:,:]
-        self.y_train = self.target_data[0:split]
-        self.y_test = self.target_data[split:]
+        self.X_train = self.input_data[0:-split,:]
+        self.X_test = self.input_data[-split:,:]
+        self.y_train = self.target_data[0:-split]
+        self.y_test = self.target_data[-split:]
 
         # generate different folds from training data for cross validation during hyperparameter tuning
 
@@ -369,14 +369,18 @@ class time_series_prediction():
     # method to plot testing and training split of data
     def test_train_plot(self):
         fig, ax = plt.subplots(figsize=(10,5))
-        ax.plot(self.time_series_dates[0:self.training_split] ,self.one_d_time_series[0:self.training_split],'k-',label='Training data') # replace returns with sp_500 for other data plotting
-        ax.plot(self.time_series_dates[self.training_split:] ,self.one_d_time_series[self.training_split:],'r-',label='Testing data')
-        ax.plot(self.time_series_dates[self.training_split+self.lag_window_length:] ,self.y_test,'o',label='Windowed testing data') # important to match time by start 5 (length of time window) after where segmented our testing and training data
+        ax.plot(self.time_series_dates[0:-self.training_split] ,self.one_d_time_series[0:-self.training_split],'ok-',label='Training data',markersize=3) # replace returns with sp_500 for other data plotting
+        ax.plot(self.time_series_dates[-self.training_split:] ,self.one_d_time_series[-self.training_split:],'or-',label='Testing data',markersize=3)
+        # ax.plot(self.time_series_dates[self.training_split+self.lag_window_length:] ,self.y_test,'o',label='Windowed testing data') # important to match time by start 5 (length of time window) after where segmented our testing and training data
         plt.legend(loc=0) 
         ax.set_xticks([self.time_series_dates[x] for x in range(0,len(self.time_series_dates),150)])
         ax.tick_params(rotation=30) 
         ax.set_title('Test traing split')
         plt.tight_layout()
+
+ # ****************************************************************************************************************
+# summarise into a nice table and self coded eval metrics
+# ****************************************************************************************************************   
 
     # method to tabulate all results together nicely
     def results(self):
