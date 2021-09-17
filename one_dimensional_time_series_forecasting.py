@@ -8,6 +8,7 @@ from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import mean_absolute_percentage_error
 
 # data preprocessing
 from sklearn.preprocessing import normalize
@@ -29,7 +30,7 @@ class time_series_prediction():
     def __init__(self,dates,one_d_time_series,lag_window_length,n_ahead_prediction):
 
         # raw input data + settings for time series -> supervised learning ML problem
-        self.one_d_time_series = np.array(one_d_time_series)      # time series array, to array ensure index works as expected for class methods
+        self.one_d_time_series = one_d_time_series#np.array(one_d_time_series)      # time series array, to array ensure index works as expected for class methods
         self.time_series_dates = np.array(dates)                  # time stamp / date for each data point
         self.lag_window_length = lag_window_length                # length of lag window
         self.n_ahead_prediction = n_ahead_prediction              # time ahead to predict
@@ -130,7 +131,9 @@ class time_series_prediction():
         # evaluate: use sklearn metric methods to calc rmse and mae
         mse = mean_squared_error(self.y_test,predictions)
         mae = mean_absolute_error(self.y_test,predictions)
+        mape = mean_absolute_percentage_error(self.y_test,predictions)
 
+        print('MAPE:',mape)
         print('RMSE: ',np.sqrt(mse))
         print('MAE: ',mae)
 
@@ -150,9 +153,12 @@ class time_series_prediction():
             # evaluate
             mse = mean_squared_error(self.y_test,svm_predictions[:])
             mae = mean_absolute_error(self.y_test,svm_predictions[:])
+            mape = mean_absolute_percentage_error(self.y_test,svm_predictions[:])
 
+            print('MAPE:',mape)
             print('RMSE: ',np.sqrt(mse))
             print('MAE: ',mae)
+            
 
             # save predictions
             self.svm_predictions = svm_predictions
@@ -160,7 +166,7 @@ class time_series_prediction():
         else: # must hyperparameter tune model
 
             # define model: support vector machine for regression
-            model = SVR()
+            model = SVR(max_iter=1000)
 
             # hyperparameter values to check
             param_grid = [
@@ -169,7 +175,7 @@ class time_series_prediction():
 
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_mean_squared_error',verbose=4,n_jobs=-3)
+            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_mean_squared_error',verbose=4,n_jobs=-1)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
@@ -181,7 +187,9 @@ class time_series_prediction():
             # evaluate
             mse = mean_squared_error(self.y_test,svm_predictions[:])
             mae = mean_absolute_error(self.y_test,svm_predictions[:])
+            mape = mean_absolute_percentage_error(self.y_test,svm_predictions[:])
 
+            print('MAPE:',mape)
             print('RMSE: ',np.sqrt(mse))
             print('MAE: ',mae)
 
@@ -201,7 +209,9 @@ class time_series_prediction():
             # evaluate
             mse = mean_squared_error(self.y_test,nn_predictions[:])
             mae = mean_absolute_error(self.y_test,nn_predictions[:])
+            mape = mean_absolute_percentage_error(self.y_test,nn_predictions[:])
 
+            print('MAPE:',mape)
             print('RMSE: ',np.sqrt(mse))
             print('MAE: ',mae)
 
@@ -217,7 +227,7 @@ class time_series_prediction():
  ]
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_mean_squared_error',verbose=4,n_jobs=-3)
+            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_mean_squared_error',verbose=4,n_jobs=-1)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
@@ -229,7 +239,9 @@ class time_series_prediction():
             # evaluate
             mse = mean_squared_error(self.y_test,mlp_predictions)
             mae = mean_absolute_error(self.y_test,mlp_predictions)
+            mape = mean_absolute_percentage_error(self.y_test,mlp_predictions)
 
+            print('MAPE:',mape)
             print('RMSE: ',np.sqrt(mse))
             print('MAE: ',mae)
 
@@ -244,8 +256,10 @@ class time_series_prediction():
         # evaluate
         mse = mean_squared_error(self.y_test,preds)
         mae = mean_absolute_error(self.y_test,preds)
+        mape = mean_absolute_percentage_error(self.y_test,preds)
 
         print('\nNaive model results:')
+        print('MAPE:',mape)
         print('RMSE: ',np.sqrt(mse))
         print('MAE: ',mae)
 
@@ -268,25 +282,34 @@ class time_series_prediction():
         ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.one_d_time_series[self.training_split+self.lag_window_length:],'o-',linewidth=3,label='real values',markersize=5) 
 
         # predicted y values
-        ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.linear_reg_predictions,'o-',label='linear regression prediction',markersize=5)
+        if self.linear_reg_predictions is not None:
+            ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.linear_reg_predictions,'o-',label='linear regression prediction',markersize=5)
         ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.naive_predictions,'.--',label='naive prediction',markersize=5)
-        ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.svm_predictions,'.--',label='svm prediction',markersize=5)
-        ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.neural_net_predictions,'.--',label='nn prediction',markersize=5)
+        if self.svm_predictions is not None:
+            ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.svm_predictions,'.--',label='svm prediction',markersize=5)
+        if self.neural_net_predictions is not None:
+            ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.neural_net_predictions,'.--',label='nn prediction',markersize=5)
 
         ax[0].legend()
         ax[0].set_title('Real values vs model predictions')
 
         # plot error plot
         if second_plot == 'error':
-            error_linreg = self.error(self.y_test,self.linear_reg_predictions)
-            # error_naive = error(np.array(test_data[:,-1]),naive_predictions)
-            error_svm = self.error(self.y_test,self.svm_predictions)
-            error_nn = self.error(self.y_test,self.neural_net_predictions)
 
-            ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_linreg,'r-',label='linear reg error')
-            # ax[1].plot(self.time_series_dates,error_naive[1:],'-',label='naive error')
-            ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_svm,'-',label='svm error')
-            ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_nn,'-',label='nn error')
+            if self.linear_reg_predictions is not None:
+                error_linreg = self.error(self.y_test,self.linear_reg_predictions)
+            if self.svm_predictions is not None:
+                error_svm = self.error(self.y_test,self.svm_predictions)
+            if self.neural_net_predictions is not None:
+                error_nn = self.error(self.y_test,self.neural_net_predictions)
+
+            if self.linear_reg_predictions is not None:
+                ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_linreg,'r-',label='linear reg error')
+            if self.svm_predictions is not None:
+                ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_svm,'-',label='svm error')
+            if self.neural_net_predictions is not None:
+                ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_nn,'-',label='nn error')
+            
             ax[1].set_title('Error signal for predictive models')
             ax[1].set_xlabel('Dates')
             ax[1].legend()
@@ -365,15 +388,21 @@ class time_series_prediction():
         zeros = [None for i in range(0,self.training_split+self.lag_window_length)]
 
         # append prediction results
-        linear_predictions = np.append(zeros,self.linear_reg_predictions)
-        svm_predictions = np.append(zeros,self.svm_predictions)
-        nn_predictions = np.append(zeros,self.neural_net_predictions)
+        if self.linear_reg_predictions is not None:
+            linear_predictions = np.append(zeros,self.linear_reg_predictions)
+        if self.svm_predictions is not None:
+            svm_predictions = np.append(zeros,self.svm_predictions)
+        if self.neural_net_predictions is not None:
+            nn_predictions = np.append(zeros,self.neural_net_predictions)
         naive_predictions = np.append(zeros,self.naive_predictions)
 
         # save predictions to df
-        df_results['Linear'] = linear_predictions
-        df_results['SVM'] = svm_predictions
-        df_results['NN'] = nn_predictions
+        if self.linear_reg_predictions is not None:
+            df_results['Linear'] = linear_predictions
+        if self.svm_predictions is not None:
+            df_results['SVM'] = svm_predictions
+        if self.neural_net_predictions is not None:
+            df_results['NN'] = nn_predictions
         df_results['Naive'] = naive_predictions
         
         return df_results
