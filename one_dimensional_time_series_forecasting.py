@@ -148,7 +148,7 @@ class time_series_prediction():
 
         if model_tunning == False: #hyperparameter are known
             # train model
-            svm_regres = SVR(max_iter=1000,C=C, kernel=kernel, epsilon=epsilon).fit(self.X_train,self.y_train)
+            svm_regres = SVR(max_iter=5000,C=C, kernel=kernel, epsilon=epsilon).fit(self.X_train,self.y_train)
             print('Model params: ', svm_regres.get_params())
             # predict on test set
             svm_predictions = svm_regres.predict(self.X_test)
@@ -169,7 +169,7 @@ class time_series_prediction():
         else: # must hyperparameter tune model
 
             # define model: support vector machine for regression
-            model = SVR(max_iter=1000,tol=1e-4)
+            model = SVR(max_iter=5000,tol=1e-4)
 
             # hyperparameter values to check
             param_grid = [
@@ -319,7 +319,7 @@ class time_series_prediction():
             ax[1].set_xlabel('Dates')
             ax[1].legend()
             # ax[1].set_ylim([-10,10])
-            ax[1].set_xticks([self.time_series_dates[x] for x in range(self.training_split,len(self.time_series_dates),28)])
+            ax[1].set_xticks([self.time_series_dates[x] for x in range(-self.training_split,-1,1)])
             ax[1].tick_params(rotation=30)
         
         elif second_plot == 'cumprod':
