@@ -88,10 +88,10 @@ class time_series_prediction():
     def train_test_split(self,split):
         # sequentially splits data for testing and training
         self.training_split = split
-        self.X_train = self.input_data[0:split,:]
-        self.X_test = self.input_data[split:,:]
-        self.y_train = self.target_data[0:split]
-        self.y_test = self.target_data[split:]
+        self.X_train = self.input_data[0:-split,:]
+        self.X_test = self.input_data[-split:,:]
+        self.y_train = self.target_data[0:-split]
+        self.y_test = self.target_data[-split:]
 
         # generate different folds from training data for cross validation during hyperparameter tuning
 
@@ -101,7 +101,7 @@ class time_series_prediction():
         # visualize cross validation splits
         fig,ax = plt.subplots(5,1,sharex=True)
         i = 0
-        training_data = self.one_d_time_series[0:self.training_split]
+        training_data = self.one_d_time_series[0:-self.training_split]
         for tr_index, val_index in tscv.split(training_data): # training and validation splits for 5 folds
             # print(tr_index, val_index)
             ax[i].plot(tr_index,training_data[tr_index[0]:tr_index[-1]+1],'b-',label='training set')
@@ -249,9 +249,8 @@ class time_series_prediction():
             self.neural_net_predictions = mlp_predictions
 
     def naive_model(self): # t's prediction is t-1's value, note that this means you miss the first time point
-        preds = np.zeros(len(self.one_d_time_series[self.training_split + self.lag_window_length:]))
-        preds[0] = self.one_d_time_series[self.training_split + self.lag_window_length-1]
-        preds[1:] = self.one_d_time_series[self.training_split + self.lag_window_length:-1]
+        preds = np.zeros(self.training_split)
+        preds = self.one_d_time_series[-self.training_split-1:-1]
 
         # evaluate
         mse = mean_squared_error(self.y_test,preds)
@@ -279,16 +278,16 @@ class time_series_prediction():
         fig, ax = plt.subplots(2,1,figsize=(10,7),sharex=True)
 
         # original time series
-        ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.one_d_time_series[self.training_split+self.lag_window_length:],'o-',linewidth=3,label='real values',markersize=5) 
+        ax[0].plot(self.time_series_dates[-self.training_split:],self.one_d_time_series[-self.training_split:],'o-',linewidth=3,label='real values',markersize=5) 
 
         # predicted y values
         if self.linear_reg_predictions is not None:
-            ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.linear_reg_predictions,'o-',label='linear regression prediction',markersize=5)
-        ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.naive_predictions,'.--',label='naive prediction',markersize=5)
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.linear_reg_predictions,'o-',label='linear regression prediction',markersize=5)
+        ax[0].plot(self.time_series_dates[-self.training_split:],self.naive_predictions,'.--',label='naive prediction',markersize=5)
         if self.svm_predictions is not None:
-            ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.svm_predictions,'.--',label='svm prediction',markersize=5)
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.svm_predictions,'.--',label='svm prediction',markersize=5)
         if self.neural_net_predictions is not None:
-            ax[0].plot(self.time_series_dates[self.training_split+self.lag_window_length:],self.neural_net_predictions,'.--',label='nn prediction',markersize=5)
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.neural_net_predictions,'.--',label='nn prediction',markersize=5)
 
         ax[0].legend()
         ax[0].set_title('Real values vs model predictions')
@@ -304,11 +303,11 @@ class time_series_prediction():
                 error_nn = self.error(self.y_test,self.neural_net_predictions)
 
             if self.linear_reg_predictions is not None:
-                ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_linreg,'r-',label='linear reg error')
+                ax[1].plot(self.time_series_dates[-self.training_split:],error_linreg,'r-',label='linear reg error')
             if self.svm_predictions is not None:
-                ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_svm,'-',label='svm error')
+                ax[1].plot(self.time_series_dates[-self.training_split:],error_svm,'-',label='svm error')
             if self.neural_net_predictions is not None:
-                ax[1].plot(self.time_series_dates[self.training_split+self.lag_window_length:],error_nn,'-',label='nn error')
+                ax[1].plot(self.time_series_dates[-self.training_split:],error_nn,'-',label='nn error')
             
             ax[1].set_title('Error signal for predictive models')
             ax[1].set_xlabel('Dates')
@@ -369,9 +368,9 @@ class time_series_prediction():
     # method to plot testing and training split of data
     def test_train_plot(self):
         fig, ax = plt.subplots(figsize=(10,5))
-        ax.plot(self.time_series_dates[0:self.training_split] ,self.one_d_time_series[0:self.training_split],'k-',label='Training data') # replace returns with sp_500 for other data plotting
-        ax.plot(self.time_series_dates[self.training_split:] ,self.one_d_time_series[self.training_split:],'r-',label='Testing data')
-        ax.plot(self.time_series_dates[self.training_split+self.lag_window_length:] ,self.y_test,'o',label='Windowed testing data') # important to match time by start 5 (length of time window) after where segmented our testing and training data
+        ax.plot(self.time_series_dates[0:-self.training_split] ,self.one_d_time_series[0:-self.training_split],'ok-',label='Training data',markersize=3) # replace returns with sp_500 for other data plotting
+        ax.plot(self.time_series_dates[-self.training_split:] ,self.one_d_time_series[-self.training_split:],'or-',label='Testing data',markersize=3)
+        # ax.plot(self.time_series_dates[self.training_split+self.lag_window_length:] ,self.y_test,'o',label='Windowed testing data') # important to match time by start 5 (length of time window) after where segmented our testing and training data
         plt.legend(loc=0) 
         ax.set_xticks([self.time_series_dates[x] for x in range(0,len(self.time_series_dates),150)])
         ax.tick_params(rotation=30) 
@@ -385,7 +384,7 @@ class time_series_prediction():
         df_results['Value'] = self.one_d_time_series
         
         # set all values before prediction start to zero
-        zeros = [None for i in range(0,self.training_split+self.lag_window_length)]
+        zeros = [None for i in range(len(self.one_d_time_series)-self.training_split)]
 
         # append prediction results
         if self.linear_reg_predictions is not None:
