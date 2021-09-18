@@ -57,6 +57,9 @@ class time_series_prediction():
         self.linear_reg_predictions_cumprod = None
         self.svm_predictions_cumprod = None
         self.neural_net_predictions_cumprod = None
+
+        # model hyperparameter grid search results
+        self.nn_grid_params = None
     
 
 # ****************************************************************************************************************
@@ -175,7 +178,7 @@ class time_series_prediction():
 
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_mean_squared_error',verbose=4,n_jobs=-1)
+            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=4,n_jobs=-1)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
@@ -219,19 +222,22 @@ class time_series_prediction():
             self.neural_net_predictions = nn_predictions
         
         else: # perform hyperparameter tuning
-            MLP = MLPRegressor(shuffle=False,max_iter=1000) # must set shuffle to false to avoid leakage of information due to sequance problem
+            MLP = MLPRegressor(shuffle=False,max_iter=5000) # must set shuffle to false to avoid leakage of information due to sequance problem
 
             # hyperparameter values to check
             param_grid = [
-            {'hidden_layer_sizes': [(10,),(100,),(1000,)], 'activation': ['logistic', 'tanh', 'relu'],'learning_rate': ['constant', 'invscaling', 'adaptive'], 'learning_rate_init':[0.001,0.01,1]}
+            {'hidden_layer_sizes': [(10,),(100,),(500,),(1000,)], 'activation': ['logistic', 'tanh', 'relu'],'learning_rate': ['constant', 'invscaling', 'adaptive'], 'learning_rate_init':[0.001,0.01,1]}
  ]
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_mean_squared_error',verbose=4,n_jobs=-1)
+            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=4,n_jobs=-1)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
             print('best_params: ',gsearch.best_params_)
+
+            # save grid search parameters
+            self.nn_grid_params = pd.DataFrame.from_dict(gsearch.cv_results_)
 
             # model
             mlp_predictions = gsearch.best_estimator_.predict(self.X_test)
