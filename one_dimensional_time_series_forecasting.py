@@ -60,6 +60,12 @@ class time_series_prediction():
 
         # model hyperparameter grid search results
         self.nn_grid_params = None
+
+        # model testing metric results
+        self.linear_reg_rmse = None
+        self.svm_rmse = None
+        self.nn_rmse = None
+        self.naive_rmse = None
     
 
 # ****************************************************************************************************************
@@ -116,8 +122,6 @@ class time_series_prediction():
         plt.show()
 
 
-
-
 # ****************************************************************************************************************
     # predictive models
 # ****************************************************************************************************************
@@ -140,8 +144,9 @@ class time_series_prediction():
         print('RMSE: ',np.sqrt(mse))
         print('MAE: ',mae)
 
-        # save predictions
+        # save predictions and results
         self.linear_reg_predictions = predictions
+        self.linear_reg_rmse = np.sqrt(mse)
 
     def support_vector_machine(self,model_tunning=True,C=None,kernel=None,epsilon=None):
         print('\nTraining support vector machine:')
@@ -163,8 +168,9 @@ class time_series_prediction():
             print('MAE: ',mae)
             
 
-            # save predictions
+            # save predictions and results
             self.svm_predictions = svm_predictions
+            self.svm_rmse = np.sqrt(mse)
         
         else: # must hyperparameter tune model
 
@@ -196,8 +202,9 @@ class time_series_prediction():
             print('RMSE: ',np.sqrt(mse))
             print('MAE: ',mae)
 
-            # save predictions
+            # save predictions and results
             self.svm_predictions = svm_predictions
+            self.svm_rmse = np.sqrt(mse)
 
     def neural_net_mlp(self,verbose=0,model_tunning=True,hidden_layer_sizes=None,activation=None,learning_rate=None,learning_rate_init=None):
         print('\nTraining neural network: ')
@@ -220,6 +227,7 @@ class time_series_prediction():
 
             # save predictions
             self.neural_net_predictions = nn_predictions
+            self.nn_rmse = np.sqrt(mse)
         
         else: # perform hyperparameter tuning
             MLP = MLPRegressor(shuffle=False,max_iter=5000) # must set shuffle to false to avoid leakage of information due to sequance problem
@@ -253,6 +261,7 @@ class time_series_prediction():
 
              # save predictions
             self.neural_net_predictions = mlp_predictions
+            self.nn_rmse = np.sqrt(mse)
 
     def naive_model(self): # t's prediction is t-1's value, note that this means you miss the first time point
         preds = np.zeros(self.training_split)
@@ -268,7 +277,9 @@ class time_series_prediction():
         print('RMSE: ',np.sqrt(mse))
         print('MAE: ',mae)
 
+        # save predictions and results
         self.naive_predictions = preds
+        self.naive_rmse = np.sqrt(mse)
         
 # ****************************************************************************************************************
     # visualize results
@@ -279,24 +290,26 @@ class time_series_prediction():
         return error
 
     # visualize orignal time series signal aswell as predictions    
-    def vis_results_time_series(self,second_plot='error'):
+    def vis_results_time_series(self,ylabel,second_plot='error',steps=150):
         # plot prediction against actual + training data
-        fig, ax = plt.subplots(2,1,figsize=(10,7),sharex=True)
+        fig, ax = plt.subplots(2,1,figsize=(10,8),sharex=True)
 
         # original time series
-        ax[0].plot(self.time_series_dates[-self.training_split:],self.one_d_time_series[-self.training_split:],'o-',linewidth=3,label='real values',markersize=5) 
+        ax[0].plot(self.time_series_dates[-self.training_split:],self.one_d_time_series[-self.training_split:],'-',linewidth=3,label='real values')  # ,markersize=5
 
         # predicted y values
         if self.linear_reg_predictions is not None:
-            ax[0].plot(self.time_series_dates[-self.training_split:],self.linear_reg_predictions,'o-',label='linear regression prediction',markersize=5)
-        ax[0].plot(self.time_series_dates[-self.training_split:],self.naive_predictions,'.--',label='naive prediction',markersize=5)
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.linear_reg_predictions,'-',label='linear regression prediction',markersize=5)
+        ax[0].plot(self.time_series_dates[-self.training_split:],self.naive_predictions,'-',label='naive prediction')
         if self.svm_predictions is not None:
-            ax[0].plot(self.time_series_dates[-self.training_split:],self.svm_predictions,'.--',label='svm prediction',markersize=5)
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.svm_predictions,'-',label='svm prediction')
         if self.neural_net_predictions is not None:
-            ax[0].plot(self.time_series_dates[-self.training_split:],self.neural_net_predictions,'.--',label='nn prediction',markersize=5)
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.neural_net_predictions,'-',label='nn prediction')
 
         ax[0].legend()
         ax[0].set_title('Real values vs model predictions')
+        ax[0].set_ylabel(ylabel)
+        
 
         # plot error plot
         if second_plot == 'error':
@@ -319,8 +332,10 @@ class time_series_prediction():
             ax[1].set_xlabel('Dates')
             ax[1].legend()
             # ax[1].set_ylim([-10,10])
-            ax[1].set_xticks([self.time_series_dates[x] for x in range(-self.training_split,-1,1)])
+            ax[1].set_xticks([self.time_series_dates[x] for x in range(-self.training_split,-1,steps)])
             ax[1].tick_params(rotation=30)
+            ax[1].set_ylabel('Error')
+            ax[1].set_xlabel('Date')
         
         elif second_plot == 'cumprod':
 
@@ -372,15 +387,17 @@ class time_series_prediction():
         plt.tight_layout()
 
     # method to plot testing and training split of data
-    def test_train_plot(self):
+    def test_train_plot(self,ylabel,steps=150):
         fig, ax = plt.subplots(figsize=(10,5))
         ax.plot(self.time_series_dates[0:-self.training_split] ,self.one_d_time_series[0:-self.training_split],'ok-',label='Training data',markersize=3) # replace returns with sp_500 for other data plotting
         ax.plot(self.time_series_dates[-self.training_split:] ,self.one_d_time_series[-self.training_split:],'or-',label='Testing data',markersize=3)
         # ax.plot(self.time_series_dates[self.training_split+self.lag_window_length:] ,self.y_test,'o',label='Windowed testing data') # important to match time by start 5 (length of time window) after where segmented our testing and training data
         plt.legend(loc=0) 
-        ax.set_xticks([self.time_series_dates[x] for x in range(0,len(self.time_series_dates),150)])
+        ax.set_xticks([self.time_series_dates[x] for x in range(0,len(self.time_series_dates),steps)])
         ax.tick_params(rotation=30) 
         ax.set_title('Test traing split')
+        ax.set_xlabel('Date')
+        ax.set_ylabel(ylabel)
         plt.tight_layout()
 
     # method to tabulate all results together nicely
@@ -437,3 +454,81 @@ def hit_rate(dates,original_values, predictions): # pass lists / arrays of dates
     print(f'Movement prediction accuracy: {round(accuracy*100,2)} %')
     print(f'Confusion matrix:\n{matrix}')
     return df
+
+def invert_scaling(scaler,testing_data,predictions):
+    # invert scaling
+    inverted_predictions = scaler.inverse_transform(predictions.reshape(-1, 1))
+    inverted_testing_data = scaler.inverse_transform(testing_data.reshape(-1, 1))
+    # compute eval metrics
+    mse = mean_squared_error(inverted_testing_data,inverted_predictions)
+    mae = mean_absolute_error(inverted_testing_data,inverted_predictions)
+    mape = mean_absolute_percentage_error(inverted_testing_data,inverted_predictions)
+
+    print('MAPE:',mape)
+    print('RMSE: ',np.sqrt(mse))
+    print('MAE: ',mae)
+
+    return inverted_predictions, inverted_testing_data
+
+    # invert difference + log
+def invert_first_difference_with_log(prediction_split,lag_window,predictions,df_original):
+    # first real value to work from
+    beginnning_value = df_original['#Passengers_log'].iloc[-prediction_split] # this must be the column that is logged, before differencing
+    beginning_date = df_original['Month'].iloc[-prediction_split]
+    print(f'Beginning: {beginnning_value} at date: {beginning_date}')
+
+    # determined predicted values
+    total_dates = df_original.shape[0]
+    total_prediction_range =  prediction_split
+    count = 0
+    previous_value = beginnning_value
+    inverted = []
+    for date in range(total_prediction_range):
+        real_value = previous_value + predictions[date]
+        inverted.append(real_value)
+        previous_value = real_value
+
+    # set all values before prediction start to zero
+    zeros = [None for i in range(0,total_dates-prediction_split)]
+
+    # append prediction results
+    inverted_predictions = np.append(zeros,inverted)
+
+    # tabulate
+    df_results = pd.DataFrame(columns=['Date','Value','Pred Value'])
+    df_results['Month'] = df_original['Month']
+    df_results['Value'] = df_original['#Passengers']
+    df_results['Pred Value'] = inverted_predictions
+    df_results['Pred Value'][-prediction_split:].apply(lambda x: np.exp(x)) # inverting the log
+    return df_results
+
+def invert_first_difference(prediction_split,lag_window,predictions,df_original):
+    # first real value to work from
+    beginnning_value = df_original['#Passengers'].iloc[-prediction_split]
+    beginning_date = df_original['Month'].iloc[-prediction_split]
+    print(f'Beginning: {beginnning_value} at date: {beginning_date}')
+
+    # determined predicted values
+    total_dates = df_original.shape[0]
+    total_prediction_range =  prediction_split
+    count = 0
+    previous_value = beginnning_value
+    inverted = []
+    for date in range(total_prediction_range):
+        real_value = previous_value + predictions[date]
+        inverted.append(real_value)
+        previous_value = real_value
+
+    # set all values before prediction start to zero
+    zeros = [None for i in range(0,total_dates-prediction_split)]
+
+    # append prediction results
+    inverted_predictions = np.append(zeros,inverted)
+
+    # tabulate
+    df_results = pd.DataFrame(columns=['Date','Value','Pred Value'])
+    df_results['Month'] = df_original['Month']
+    df_results['Value'] = df_original['#Passengers']
+    df_results['Pred Value'] = inverted_predictions
+
+    return df_results
