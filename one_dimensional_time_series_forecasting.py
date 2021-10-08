@@ -66,6 +66,9 @@ class time_series_prediction():
         self.svm_rmse = None
         self.nn_rmse = None
         self.naive_rmse = None
+
+        # saved models
+        self.nn_model = None
     
 
 # ****************************************************************************************************************
@@ -214,6 +217,7 @@ class time_series_prediction():
         if model_tunning == False:
             # train neural network
             nn_regres = MLPRegressor(hidden_layer_sizes=hidden_layer_sizes,activation=activation,learning_rate=learning_rate,learning_rate_init=learning_rate_init,shuffle=False,random_state=1,max_iter=1000,verbose=verbose).fit(self.X_train,self.y_train)
+            
             print('Model params:', nn_regres.get_params())
             # make predictions
             nn_predictions = nn_regres.predict(self.X_test)
@@ -230,6 +234,7 @@ class time_series_prediction():
             # save predictions
             self.neural_net_predictions = nn_predictions
             self.nn_rmse = np.sqrt(mse)
+            self.nn_model = nn_regres
         
         else: # perform hyperparameter tuning
             MLP = MLPRegressor(shuffle=False,max_iter=5000) # must set shuffle to false to avoid leakage of information due to sequance problem
@@ -264,6 +269,7 @@ class time_series_prediction():
              # save predictions
             self.neural_net_predictions = mlp_predictions
             self.nn_rmse = np.sqrt(mse)
+            self.nn_model = nn_regres
 
     def naive_model(self): # t's prediction is t-1's value, note that this means you miss the first time point
         preds = np.zeros(self.training_split)
