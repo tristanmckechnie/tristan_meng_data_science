@@ -80,6 +80,7 @@ class time_series_prediction():
         
         # loop through data and populate array
         for i in range(num_rows):
+            
             # input features
             array[i,0:self.lag_window_length+1] = self.one_d_time_series[i:i+self.lag_window_length+1]
             # target feature/s
@@ -87,6 +88,7 @@ class time_series_prediction():
             
             if verbose == 1:
                 # show pattern
+                print(i)
                 print(array[i,0:self.lag_window_length],' : ',array[i,self.lag_window_length])
 
         # save results as a class attribute
