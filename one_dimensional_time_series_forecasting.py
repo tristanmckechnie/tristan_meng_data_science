@@ -179,7 +179,7 @@ class time_series_prediction():
 
             # hyperparameter values to check
             param_grid = [
-            {'C': [0.1, 1, 10, 100], 'kernel': ['linear','rbf','sigmoid'],'epsilon':[0.1,1,10,100]},
+            {'C': [0.001,0.1, 1, 10, 100], 'kernel': ['linear','rbf','sigmoid'],'epsilon':[0.1,1,10,100]},
             ]
 
             # perform grid search, using cross validaiton
