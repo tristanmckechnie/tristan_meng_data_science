@@ -30,7 +30,7 @@ class time_series_prediction():
     def __init__(self,dates,one_d_time_series,lag_window_length,n_ahead_prediction):
 
         # raw input data + settings for time series -> supervised learning ML problem
-        self.one_d_time_series = one_d_time_series#np.array(one_d_time_series)      # time series array, to array ensure index works as expected for class methods
+        self.one_d_time_series = one_d_time_series #np.array(one_d_time_series)      # time series array, to array ensure index works as expected for class methods
         self.time_series_dates = np.array(dates)                  # time stamp / date for each data point
         self.lag_window_length = lag_window_length                # length of lag window
         self.n_ahead_prediction = n_ahead_prediction              # time ahead to predict
@@ -66,6 +66,10 @@ class time_series_prediction():
         self.svm_rmse = None
         self.nn_rmse = None
         self.naive_rmse = None
+
+        # mode loss-curves
+        self.nn_loss_curve = None 
+        self.svm_lost_curve = None
     
 
 # ****************************************************************************************************************
@@ -148,7 +152,7 @@ class time_series_prediction():
         self.linear_reg_predictions = predictions
         self.linear_reg_rmse = np.sqrt(mse)
 
-    def support_vector_machine(self,model_tunning=True,C=None,kernel=None,epsilon=None):
+    def support_vector_machine(self,model_tunning=True,C=None,kernel=None,epsilon=None,verbose=0):
         print('\nTraining support vector machine:')
 
         if model_tunning == False: #hyperparameter are known
@@ -175,16 +179,16 @@ class time_series_prediction():
         else: # must hyperparameter tune model
 
             # define model: support vector machine for regression
-            model = SVR(max_iter=5000,tol=1e-4)
+            model = SVR(max_iter=5000,tol=1e-5)
 
             # hyperparameter values to check
             param_grid = [
-            {'C': [0.001,0.1, 1, 10, 100], 'kernel': ['linear','rbf','sigmoid'],'epsilon':[0.1,1,10,100]},
+            {'C': [0.001,0.1, 1, 10, 100], 'kernel': ['linear','rbf','sigmoid']}, # ,'epsilon':[0.1,1,10,100]
             ]
 
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=4,n_jobs=-1)
+            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=verbose,n_jobs=-1)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
@@ -206,12 +210,20 @@ class time_series_prediction():
             self.svm_predictions = svm_predictions
             self.svm_rmse = np.sqrt(mse)
 
-    def neural_net_mlp(self,verbose=0,model_tunning=True,hidden_layer_sizes=None,activation=None,learning_rate=None,learning_rate_init=None):
+    def neural_net_mlp(self,verbose=0,model_tunning=True,hidden_layer_sizes=None,activation=None,learning_rate=None,learning_rate_init=None,solver='adam'):
         print('\nTraining neural network: ')
 
         if model_tunning == False:
             # train neural network
-            nn_regres = MLPRegressor(hidden_layer_sizes=hidden_layer_sizes,activation=activation,learning_rate=learning_rate,learning_rate_init=learning_rate_init,shuffle=False,random_state=1,max_iter=1000,verbose=verbose).fit(self.X_train,self.y_train)
+            nn_regres = MLPRegressor(hidden_layer_sizes=hidden_layer_sizes,
+                                    activation=activation,
+                                    learning_rate=learning_rate,
+                                    learning_rate_init=learning_rate_init,
+                                    shuffle=False,random_state=1,
+                                    max_iter=1000,verbose=verbose,
+                                    n_iter_no_change=200,
+                                    solver=solver
+                                    ).fit(self.X_train,self.y_train)
             print('Model params:', nn_regres.get_params())
             # make predictions
             nn_predictions = nn_regres.predict(self.X_test)
@@ -228,17 +240,21 @@ class time_series_prediction():
             # save predictions
             self.neural_net_predictions = nn_predictions
             self.nn_rmse = np.sqrt(mse)
+
+            # save loss-curve
+            if solver != 'lbfgs':
+                self.nn_loss_curve = nn_regres.loss_curve_
         
         else: # perform hyperparameter tuning
-            MLP = MLPRegressor(shuffle=False,max_iter=5000) # must set shuffle to false to avoid leakage of information due to sequance problem
+            MLP = MLPRegressor(shuffle=False,max_iter=5000,tol=1e-5,n_iter_no_change=200,solver=solver) # must set shuffle to false to avoid leakage of information due to sequance problem
 
             # hyperparameter values to check
             param_grid = [
-            {'hidden_layer_sizes': [(10,),(100,),(500,),(1000,)], 'activation': ['logistic', 'tanh', 'relu'],'learning_rate': ['constant', 'invscaling', 'adaptive'], 'learning_rate_init':[0.001,0.01,1]}
+            {'hidden_layer_sizes': [(10,),(100,),(500,),(1000,),(10,10,10),(100,100,100)], 'activation': ['logistic', 'tanh', 'relu'],'learning_rate': ['constant', 'invscaling', 'adaptive'], 'learning_rate_init':[0.0001,0.001,0.01]}
  ]
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=4,n_jobs=-1)
+            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=verbose,n_jobs=-1)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
@@ -262,6 +278,9 @@ class time_series_prediction():
              # save predictions
             self.neural_net_predictions = mlp_predictions
             self.nn_rmse = np.sqrt(mse)
+
+            # save loss-curve
+            self.nn_loss_curve = gsearch.best_estimator_.loss_curve_
 
     def naive_model(self): # t's prediction is t-1's value, note that this means you miss the first time point
         preds = np.zeros(self.training_split)
