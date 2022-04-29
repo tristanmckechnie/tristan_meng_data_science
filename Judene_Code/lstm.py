@@ -60,11 +60,7 @@ class LSTMNetwork:
         # --------------------------------------------------------------------------------
 
         # Create the input
-        input = [
-            Input(
-                shape=(1, 2)
-            )
-        ]
+        input = [Input( shape=(1, 2))]
 
         # Create the layers
         layers = []
