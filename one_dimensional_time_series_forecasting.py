@@ -188,7 +188,7 @@ class time_series_prediction():
 
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=verbose,n_jobs=-1)
+            gsearch = GridSearchCV(estimator=model, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=verbose,n_jobs=-4)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
@@ -254,7 +254,7 @@ class time_series_prediction():
  ]
             # perform grid search, using cross validaiton
             tscv = TimeSeriesSplit(n_splits=5)
-            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=verbose,n_jobs=-1)
+            gsearch = GridSearchCV(estimator=MLP, cv=tscv, param_grid=param_grid, scoring = 'neg_root_mean_squared_error',verbose=verbose,n_jobs=-4)
             gsearch.fit(self.X_train, self.y_train)
             print('best_score: ', gsearch.best_score_)
             print('best_model: ', gsearch.best_estimator_)
