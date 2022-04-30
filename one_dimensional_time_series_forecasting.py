@@ -1,3 +1,4 @@
+# plotting and data wrangling
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -13,6 +14,7 @@ from sklearn.metrics import mean_absolute_percentage_error
 # data preprocessing
 from sklearn.preprocessing import normalize
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
 
 # predictive models
 from sklearn.linear_model import LinearRegression
@@ -23,6 +25,14 @@ from sklearn.svm import SVR
 # cross validation and hyper-parameter search
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.model_selection import GridSearchCV
+
+# neural networks
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam
+import keras_tuner as kt
 
 # class for one-dimensional time series forecasting
 class time_series_prediction():
@@ -51,6 +61,7 @@ class time_series_prediction():
         self.svm_predictions = None
         self.neural_net_predictions = None
         self.naive_predictions = None
+        self.lstm_predictions = None
 
         # cumprod results from predictions - set after calling .vis_results_time_series()
         self.real_vals_cumprod = None
@@ -66,11 +77,18 @@ class time_series_prediction():
         self.svm_rmse = None
         self.nn_rmse = None
         self.naive_rmse = None
+        self.lstm_rmse = None
 
-        # mode loss-curves
+        # model loss-curves
         self.nn_loss_curve = None 
         self.svm_lost_curve = None
-    
+        self.lstm_loss_curve = None
+
+        # models
+        self.linear_regression_model = None
+        self.svr_model = None
+        self.mlp_model = None
+        self.lstm_model = None
 
 # ****************************************************************************************************************
     # data wrangling
@@ -152,6 +170,10 @@ class time_series_prediction():
         self.linear_reg_predictions = predictions
         self.linear_reg_rmse = np.sqrt(mse)
 
+        # save model as class variables
+        self.linear_regression_model = reg_model
+
+
     def support_vector_machine(self,model_tunning=True,C=None,kernel=None,epsilon=None,verbose=0):
         print('\nTraining support vector machine:')
 
@@ -171,11 +193,13 @@ class time_series_prediction():
             print('RMSE: ',np.sqrt(mse))
             print('MAE: ',mae)
             
-
             # save predictions and results
             self.svm_predictions = svm_predictions
             self.svm_rmse = np.sqrt(mse)
-        
+
+            # save model as class variable
+            self.svr_model = svm_regres
+
         else: # must hyperparameter tune model
 
             # define model: support vector machine for regression
@@ -210,8 +234,11 @@ class time_series_prediction():
             self.svm_predictions = svm_predictions
             self.svm_rmse = np.sqrt(mse)
 
+            # save model as class variable
+            self.svr_model = gsearch.best_estimator_
+
     def neural_net_mlp(self,verbose=0,model_tunning=True,hidden_layer_sizes=None,activation=None,learning_rate=None,learning_rate_init=None,solver='adam'):
-        print('\nTraining neural network: ')
+        print('\nTraining MLP neural network: ')
 
         if model_tunning == False:
             # train neural network
@@ -220,8 +247,8 @@ class time_series_prediction():
                                     learning_rate=learning_rate,
                                     learning_rate_init=learning_rate_init,
                                     shuffle=False,random_state=1,
-                                    max_iter=1000,verbose=verbose,
-                                    n_iter_no_change=200,
+                                    max_iter=2000,verbose=verbose,
+                                    n_iter_no_change=100,
                                     solver=solver
                                     ).fit(self.X_train,self.y_train)
             print('Model params:', nn_regres.get_params())
@@ -244,9 +271,12 @@ class time_series_prediction():
             # save loss-curve
             if solver != 'lbfgs':
                 self.nn_loss_curve = nn_regres.loss_curve_
+
+            # save model as class attribute
+            self.mlp_model = nn_regres
         
         else: # perform hyperparameter tuning
-            MLP = MLPRegressor(shuffle=False,max_iter=5000,tol=1e-5,n_iter_no_change=200,solver=solver) # must set shuffle to false to avoid leakage of information due to sequance problem
+            MLP = MLPRegressor(shuffle=False,max_iter=5000,tol=1e-4,n_iter_no_change=200,solver=solver) # must set shuffle to false to avoid leakage of information due to sequance problem
 
             # hyperparameter values to check
             param_grid = [
@@ -282,6 +312,153 @@ class time_series_prediction():
             # save loss-curve
             self.nn_loss_curve = gsearch.best_estimator_.loss_curve_
 
+            # save model as class attribute
+            self.mlp_model = gsearch.best_estimator_
+
+    def lstm(self,model_tunning=True, n_nodes=[128,128,128], n_lstm_layers=3, n_epochs=2000, n_batch=128,verbose=1):
+        """
+        This function trains a keras lstm neural network. Some important parameters are:
+
+        :param model_tunning:   whether to perform hyperparameter optimization or now
+        :param n_nodes:         number of hidden units - list with number of nodes per lstm layer
+        :param n_lstm_layers:   number of lstm hidden layers
+        :param n_epochs:        number of times training passes over the entire training set
+        :param n_batch:         how many training samples before weights are updated
+        """
+
+        print('\nTraining LSTM neural network: ')
+
+        if model_tunning == False:
+            # define model
+            model = Sequential()
+            
+            # add initial lstm layers
+            model.add(LSTM(n_nodes[0], activation= 'relu' , input_shape=(self.lag_window_length, 1),return_sequences=True)) # lstm layer
+
+            # add subsequent hidden LSTM layers
+            if n_lstm_layers > 1:
+                # setup hidden layers between first and last LSTM layers
+                for i in range(1,n_lstm_layers-1):
+                    model.add(LSTM(n_nodes[i], activation= 'relu', return_sequences=True))
+
+                # add final lstm hidden layers
+                model.add(LSTM(n_nodes[i+1], activation= 'relu', return_sequences=False))
+
+            # add a final fully connected layer + single predictor layer 
+            model.add(Dense(1))                                                    # final predictor
+
+            # prepare optimizer and compile model
+            opt = Adam(learning_rate=0.001)
+            model.compile(loss= 'mse', optimizer= opt)
+
+            # setup some callbacks
+            callbacks_list = [EarlyStopping(verbose=1,monitor='loss',mode='min',patience=20)]
+
+            # fit model
+            history = model.fit(self.X_train, self.y_train, epochs=n_epochs, batch_size=n_batch, verbose=verbose, callbacks=callbacks_list)
+            
+            # test set preidictions
+            lstm_predictions = model.predict(self.X_test)
+            lstm_predictions = np.ravel(lstm_predictions[:,0]) # reshape from (X,1) to (X,)
+
+            # evaluate
+            mse = mean_squared_error(self.y_test,lstm_predictions)
+            mae = mean_absolute_error(self.y_test,lstm_predictions)
+            mape = mean_absolute_percentage_error(self.y_test,lstm_predictions)
+
+            print('MAPE:',mape)
+            print('RMSE: ',np.sqrt(mse))
+            print('MAE: ',mae)
+
+             # save predictions
+            self.lstm_predictions = lstm_predictions
+            self.lstm_rmse = np.sqrt(mse)
+
+            # save loss-curve
+            self.lstm_loss_curve = history
+
+            # show model summary
+            model.summary()
+
+            # save model as class attribute
+            self.lstm_model = model
+
+        elif model_tunning == True:
+
+            # define abstract lstm builder function
+            def build_model(hp):
+
+                # define model
+                model = Sequential()
+                
+                # add initial lstm layers
+                model.add(LSTM(units=hp.Int("units 0", min_value=16, max_value=288, step=32), activation= 'relu' , input_shape=(self.lag_window_length, 1),return_sequences=True)) # lstm layer
+
+                # setup hidden layers between first and last LSTM layers
+                for i in range(hp.Int('layers',1,3)):
+                    model.add(LSTM(hp.Int(f"units {i}", min_value=16, max_value=288, step=32), activation= 'relu', return_sequences=True))
+
+                # add final lstm hidden layers
+                model.add(LSTM(hp.Int("units -1", min_value=16, max_value=288, step=32), activation= 'relu', return_sequences=False))
+
+                # add a final fully connected layer + single predictor layer 
+                model.add(Dense(1))  # final predictor
+
+                # prepare optimizer and compile model
+                opt = Adam(learning_rate=hp.Choice('learning_rate',[1e-2,1e-3,1e-4]))
+                model.compile(loss= 'mse', optimizer= opt)
+
+                return model
+
+            # setup hyperparameter tuner
+            tuner = kt.RandomSearch(
+                hypermodel=build_model,
+                objective="val_loss",
+                max_trials=20,
+                executions_per_trial=5,
+                overwrite=True,
+                directory="./lstm_hp_res/",
+                project_name="helloworld",
+            )
+
+            # setup data with validation set for hp tuning
+            X_train = self.X_train
+            Y_train = self.y_train
+
+            X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=1, shuffle=False)
+
+            # start tuning hyperparameters
+            tuner.search(X_train, Y_train, epochs=5, validation_data=(X_val, Y_val))
+
+            # retrieve and build best LSTM model
+            best_hp = tuner.get_best_hyperparameters()[0]
+            model = tuner.hypermodel.build(best_hp)
+            history = model.fit(best_hp, model, self.X_train, self.y_train)
+
+            # test set preidictions
+            lstm_predictions = model.predict(self.X_test)
+            lstm_predictions = np.ravel(lstm_predictions[:,0])
+
+            # evaluate
+            mse = mean_squared_error(self.y_test,lstm_predictions)
+            mae = mean_absolute_error(self.y_test,lstm_predictions)
+            mape = mean_absolute_percentage_error(self.y_test,lstm_predictions)
+
+            print('MAPE:',mape)
+            print('RMSE: ',np.sqrt(mse))
+            print('MAE: ',mae)
+
+             # save predictions
+            self.lstm_predictions = lstm_predictions
+            self.lstm_rmse = np.sqrt(mse)
+
+            # save loss-curve
+            self.lstm_loss_curve = history
+
+            # save model as class attribute
+            self.lstm_model = model
+
+
     def naive_model(self): # t's prediction is t-1's value, note that this means you miss the first time point
         preds = np.zeros(self.training_split)
         preds = self.one_d_time_series[-self.training_split-1:-1]
@@ -305,11 +482,11 @@ class time_series_prediction():
 # ****************************************************************************************************************
     def error(self,real_data,predicted_data):
         error = np.zeros(len(real_data))
-        error = (real_data - predicted_data) / real_data
+        error = np.abs((real_data - predicted_data) / real_data)
         return error
 
     # visualize orignal time series signal aswell as predictions    
-    def vis_results_time_series(self,ylabel,second_plot='error',steps=150):
+    def vis_results_time_series(self,ylabel='value',second_plot='error',steps=150):
         # plot prediction against actual + training data
         fig, ax = plt.subplots(2,1,figsize=(10,8),sharex=True)
 
@@ -321,9 +498,11 @@ class time_series_prediction():
             ax[0].plot(self.time_series_dates[-self.training_split:],self.linear_reg_predictions,'-',label='linear regression prediction',markersize=5)
         ax[0].plot(self.time_series_dates[-self.training_split:],self.naive_predictions,'-',label='naive prediction')
         if self.svm_predictions is not None:
-            ax[0].plot(self.time_series_dates[-self.training_split:],self.svm_predictions,'-',label='svm prediction')
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.svm_predictions,'-',label='SVR prediction')
         if self.neural_net_predictions is not None:
-            ax[0].plot(self.time_series_dates[-self.training_split:],self.neural_net_predictions,'-',label='nn prediction')
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.neural_net_predictions,'-',label='MLP prediction')
+        if self.lstm_predictions is not None:
+            ax[0].plot(self.time_series_dates[-self.training_split:],self.lstm_predictions,'-',label='LSTM prediction')
 
         ax[0].legend()
         ax[0].set_title('Real values vs model predictions')
@@ -339,13 +518,17 @@ class time_series_prediction():
                 error_svm = self.error(self.y_test,self.svm_predictions)
             if self.neural_net_predictions is not None:
                 error_nn = self.error(self.y_test,self.neural_net_predictions)
+            if self.lstm_predictions is not None:
+                error_lstm = self.error(self.y_test,self.lstm_predictions)
 
             if self.linear_reg_predictions is not None:
-                ax[1].plot(self.time_series_dates[-self.training_split:],error_linreg,'r-',label='linear reg error')
+                ax[1].plot(self.time_series_dates[-self.training_split:],error_linreg,'r-',label='linear reg error')#,markerfmt=" ")
             if self.svm_predictions is not None:
-                ax[1].plot(self.time_series_dates[-self.training_split:],error_svm,'-',label='svm error')
+                ax[1].plot(self.time_series_dates[-self.training_split:],error_svm,'-',label='SVR error')#,markerfmt=" ")
             if self.neural_net_predictions is not None:
-                ax[1].plot(self.time_series_dates[-self.training_split:],error_nn,'-',label='nn error')
+                ax[1].plot(self.time_series_dates[-self.training_split:],error_nn,'-',label='MLP error')#,markerfmt=" ")
+            if self.lstm_predictions is not None:
+                ax[1].plot(self.time_series_dates[-self.training_split:],error_lstm,'-',label='LSTM error')#,markerfmt=" ")
             
             ax[1].set_title('Error signal for predictive models')
             ax[1].set_xlabel('Dates')
@@ -406,7 +589,7 @@ class time_series_prediction():
         plt.tight_layout()
 
     # method to plot testing and training split of data
-    def test_train_plot(self,ylabel,steps=150):
+    def test_train_plot(self,ylabel='value',steps=150):
         fig, ax = plt.subplots(figsize=(10,5))
         ax.plot(self.time_series_dates[0:-self.training_split] ,self.one_d_time_series[0:-self.training_split],'ok-',label='Training data',markersize=3) # replace returns with sp_500 for other data plotting
         ax.plot(self.time_series_dates[-self.training_split:] ,self.one_d_time_series[-self.training_split:],'or-',label='Testing data',markersize=3)
@@ -421,7 +604,10 @@ class time_series_prediction():
 
     # method to tabulate all results together nicely
     def results(self):
-        df_results = pd.DataFrame(columns=['date','Value','Linear','SVM','NN','Naive'])
+        """
+        This function neatly collects the prediction data into a single dataframe        
+        """
+        df_results = pd.DataFrame(columns=['date','Value','Linear','SVM','NN','LSTM','Naive'])
         df_results['date'] = self.time_series_dates
         df_results['Value'] = self.one_d_time_series
         
@@ -435,6 +621,8 @@ class time_series_prediction():
             svm_predictions = np.append(zeros,self.svm_predictions)
         if self.neural_net_predictions is not None:
             nn_predictions = np.append(zeros,self.neural_net_predictions)
+        if self.lstm_predictions is not None:
+            lstm_predictions = np.append(zeros,self.lstm_predictions)
         naive_predictions = np.append(zeros,self.naive_predictions)
 
         # save predictions to df
@@ -444,9 +632,17 @@ class time_series_prediction():
             df_results['SVM'] = svm_predictions
         if self.neural_net_predictions is not None:
             df_results['NN'] = nn_predictions
+        if self.lstm_predictions is not None:
+            df_results['LSTM'] = lstm_predictions
         df_results['Naive'] = naive_predictions
         
         return df_results
+
+
+
+# ****************************************************************************************************************
+#  Other useful helper functions
+# ****************************************************************************************************************
 
 # this function determines whether predictions determine the correct movement for tomorrow.
 def hit_rate(dates,original_values, predictions): # pass lists / arrays of dates, original values, and predictions
