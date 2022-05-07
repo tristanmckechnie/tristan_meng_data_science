@@ -143,6 +143,112 @@ class time_series_prediction():
         plt.tight_layout()
         plt.show()
 
+    
+    # this method prepares a supervised ml dataset from a time series and is used in the walk forward validation method
+    def series_to_supervised(self,time_series):
+        # initialize input array
+        num_rows = len(time_series) - self.lag_window_length
+        array = np.zeros((num_rows, self.lag_window_length + 1))
+        
+        # loop through data and populate array
+        for i in range(num_rows):
+            # input features
+            array[i,0:self.lag_window_length+1] = time_series[i:i+self.lag_window_length+1]
+            # target feature/s
+            array[i,-1] = time_series[i+self.lag_window_length]
+
+
+        # save results as a class attribute
+        input_data = array[:,0:self.lag_window_length]
+        target_data = array[:,self.lag_window_length]
+
+        return input_data, target_data
+    
+    # this method implements walk foward validation training and testing
+    def walk_forward_val(self,model,train_len=220,test_len=30,train_frequency=5):
+        """
+        This method implements a walk forward validation technique.
+        param: model:     trained time series model  
+        param: train_len: n number of training samples [0:n)
+        param: test_len:  m number of testing samples [n:m]
+        param: train_frequency: retrain model every f windows
+        """
+        
+        # variables to hold results through time
+        predictions = list() # list of predictions through time
+        history = list()     # list of real values through time   
+
+        """
+        importantly: these values throught time will run for dates: 0+lag_length --> -1 (ie last)
+        """ 
+
+        # define walk forward parameters
+        step_size = test_len                 # how many time steps forward the validation takes, = test_len ensures all timesteps are tested
+        window_length = train_len + test_len # how many time steps in a single windows test-train dataset 
+
+        # how many walk forward validation steps to take
+        num_walks = int(len(self.one_d_time_series) / step_size)
+        print(f'Taking {num_walks} walks during walk forward validation')
+
+        # only perform walk forward val if there are a whole number of walks
+        if len(self.one_d_time_series) % step_size == 0:
+
+            # loop through the forward walks
+            for walk in range(num_walks):
+                # define walk start and end point in time
+                walk_start = walk*step_size
+                walk_end = walk*step_size + window_length
+
+                # subset data to a single walk
+                walk_dataset = self.one_d_time_series[walk_start:walk_end]
+
+                # series to supervised ml task
+                training_data, testing_data = self.series_to_supervised(walk_dataset)
+
+                # test train split
+                X_train = training_data[0:-test_len,:]
+                X_test =  training_data[-test_len:,:]
+                y_train = testing_data[0:-test_len]
+                y_test =  testing_data[-test_len:]
+
+                # retrain model
+                if walk % train_frequency == 0:
+                    model = model.fit(X_train, y_train)
+
+                # make predictions
+                walk_preds = model.predict(X_test)
+                
+                # store results
+                predictions.extend(walk_preds)
+                history.extend(y_test)
+
+            print(f'len pred: ', len(predictions))
+            print(f'len history: ', len(history))
+            print(f'len dates: ', len(self.time_series_dates[train_len:]))
+
+            # now determine average evaluation metrics through time
+            mse = mean_squared_error(history,predictions)
+            mae = mean_absolute_error(history,predictions)
+            mape = mean_absolute_percentage_error(history,predictions)
+            df, accuracy = hit_rate(self.time_series_dates[train_len:],history,predictions)
+
+            print('MAPE:',mape)
+            print('RMSE: ',np.sqrt(mse))
+            print('MAE: ',mae)
+            print('Directional Accuracy: ', accuracy)
+
+            # store everything into a dataframe
+            df_walk_forward = pd.DataFrame(columns=['date','real_value','prediction'])
+            df_walk_forward['date'] = self.time_series_dates[train_len:]
+            df_walk_forward['real_value'] = history
+            df_walk_forward['prediction'] = predictions
+
+            return df_walk_forward
+
+        else:
+            print('Not a whole number of walks!') 
+                         
+
 
 # ****************************************************************************************************************
     # predictive models
@@ -650,9 +756,12 @@ def hit_rate(dates,original_values, predictions): # pass lists / arrays of dates
     df = pd.DataFrame(columns=['Date','Original Value','Daily PCT','Movement','Prediction','Predicted Movement'])
 
     # add known data as passed to function
-    df['Date'] = dates.to_list()
-    df['Original Value'] = original_values.to_list()
-    df['Prediction'] = predictions.to_list()
+    if type(dates) != list:
+        df['Date'] = list(dates)#.to_list()
+    if type(original_values) != list:
+        df['Original Value'] = list(original_values)#.to_list()
+    if type(predictions) != list:
+        df['Prediction'] = list(predictions)#.to_list()
 
     # determine actually movement from time t to t+1 and predicted movement
     df['Daily PCT'] = df['Original Value'].pct_change() # percentange change between t and t+1
@@ -668,7 +777,7 @@ def hit_rate(dates,original_values, predictions): # pass lists / arrays of dates
     # display eval metrics
     print(f'Movement prediction accuracy: {round(accuracy*100,2)} %')
     print(f'Confusion matrix:\n{matrix}')
-    return df
+    return df, accuracy
 
 def invert_scaling(scaler,testing_data,predictions):
     # invert scaling
