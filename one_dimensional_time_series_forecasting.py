@@ -165,7 +165,7 @@ class time_series_prediction():
         return input_data, target_data
     
     # this method implements walk foward validation training and testing
-    def walk_forward_val(self,model,train_len=220,test_len=30,train_frequency=5):
+    def walk_forward_val(self,model_name,model,train_len=220,test_len=30,train_frequency=5):
         """
         This method implements a walk forward validation technique.
         param: model:     trained time series model  
@@ -187,7 +187,7 @@ class time_series_prediction():
         window_length = train_len + test_len # how many time steps in a single windows test-train dataset 
 
         # how many walk forward validation steps to take
-        num_walks = int(len(self.one_d_time_series) / step_size)
+        num_walks = int((len(self.one_d_time_series)-train_len) / step_size)
         print(f'Taking {num_walks} walks during walk forward validation')
 
         # only perform walk forward val if there are a whole number of walks
@@ -195,6 +195,7 @@ class time_series_prediction():
 
             # loop through the forward walks
             for walk in range(num_walks):
+                print(f'walk {walk}')
                 # define walk start and end point in time
                 walk_start = walk*step_size
                 walk_end = walk*step_size + window_length
@@ -213,7 +214,11 @@ class time_series_prediction():
 
                 # retrain model
                 if walk % train_frequency == 0:
-                    model = model.fit(X_train, y_train)
+                    print('Retraining model.')
+                    if model_name != 'LSTM':
+                        model = model.fit(X_train, y_train)
+                    else:
+                        model.fit(X_train, y_train)
 
                 # make predictions
                 walk_preds = model.predict(X_test)
@@ -243,7 +248,7 @@ class time_series_prediction():
             df_walk_forward['real_value'] = history
             df_walk_forward['prediction'] = predictions
 
-            return df_walk_forward
+            return df_walk_forward, df
 
         else:
             print('Not a whole number of walks!') 
@@ -758,10 +763,18 @@ def hit_rate(dates,original_values, predictions): # pass lists / arrays of dates
     # add known data as passed to function
     if type(dates) != list:
         df['Date'] = list(dates)#.to_list()
+    else:
+        df['Date'] = dates
+
     if type(original_values) != list:
-        df['Original Value'] = list(original_values)#.to_list()
+            df['Original Value'] = list(original_values)#.to_list()
+    else:
+            df['Original Value'] = original_values
+
     if type(predictions) != list:
         df['Prediction'] = list(predictions)#.to_list()
+    else:
+        df['Prediction'] = predictions
 
     # determine actually movement from time t to t+1 and predicted movement
     df['Daily PCT'] = df['Original Value'].pct_change() # percentange change between t and t+1
