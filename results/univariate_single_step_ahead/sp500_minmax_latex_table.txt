@@ -1,0 +1,11 @@
+\begin{longtable}{rlrrrrl}
+\hline
+    & model             &      RMSE &         MAE &        MAPE &       DA & parameters                                                                                                      \\
+\hline
+\endhead
+  0 & Linear Regression & 0.0323763 &   0.0221695 &   0.0226341 & 0.455034 &                                                                                                                 \\
+  1 & Linear Regression & 0.0901368 &   0.0817907 &   0.0686329 & 0.46443  & \{'C': 1, 'kernel': 'linear'\}                                                                                    \\
+  2 & Linear Regression & 0.0632483 & nan         & nan         & 0.472483 & \{'activation': 'tanh', 'hidden\_layer\_sizes': (1000,), 'learning\_rate': 'adaptive', 'learning\_rate\_init': 0.001\} \\
+  3 & Linear Regression & 0.127358  &   0.0877246 &   0.0605435 & 0.451007 &                                                                                                                 \\
+\hline
+\end{longtable}

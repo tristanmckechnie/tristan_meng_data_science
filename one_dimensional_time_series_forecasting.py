@@ -27,17 +27,23 @@ from sklearn.model_selection import TimeSeriesSplit
 from sklearn.model_selection import GridSearchCV
 
 # neural networks
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LSTM
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam
 import keras_tuner as kt
 
+# pretty terminal print
+from tabulate import tabulate
+
 # class for one-dimensional time series forecasting
 class time_series_prediction():
 
-    def __init__(self,dates,one_d_time_series,lag_window_length,n_ahead_prediction):
+    def __init__(self,name,dates,one_d_time_series,lag_window_length,n_ahead_prediction):
+
+        # forecasting run name - typically named for the asset class + feature engineering type
+        self.name = name
 
         # raw input data + settings for time series -> supervised learning ML problem
         self.one_d_time_series = one_d_time_series #np.array(one_d_time_series)      # time series array, to array ensure index works as expected for class methods
@@ -72,12 +78,29 @@ class time_series_prediction():
         # model hyperparameter grid search results
         self.nn_grid_params = None
 
+        # best hyperparameter results
+        self.svm_best_params = None
+        self.nn_best_params = None
+        self.lstm_best_params = None
+
         # model testing metric results
         self.linear_reg_rmse = None
         self.svm_rmse = None
         self.nn_rmse = None
         self.naive_rmse = None
         self.lstm_rmse = None
+
+        self.linear_reg_mape = None
+        self.svm_mape = None
+        self.nn_mape = None
+        self.naive_mape = None
+        self.lstm_mape = None
+
+        self.linear_reg_mae = None
+        self.svm_mae = None
+        self.nn_mae = None
+        self.naive_mae = None
+        self.lstm_mae = None
 
         # model loss-curves
         self.nn_loss_curve = None 
@@ -89,6 +112,9 @@ class time_series_prediction():
         self.svr_model = None
         self.mlp_model = None
         self.lstm_model = None
+
+        # collected prediction results - this is set by the .results() methods
+        self.results = None
 
 # ****************************************************************************************************************
     # data wrangling
@@ -280,6 +306,8 @@ class time_series_prediction():
         # save predictions and results
         self.linear_reg_predictions = predictions
         self.linear_reg_rmse = np.sqrt(mse)
+        self.linear_reg_mape = mape
+        self.linear_reg_mae = mae
 
         # save model as class variables
         self.linear_regression_model = reg_model
@@ -307,6 +335,8 @@ class time_series_prediction():
             # save predictions and results
             self.svm_predictions = svm_predictions
             self.svm_rmse = np.sqrt(mse)
+            self.svm_mape = mape
+            self.svm_mae = mae
 
             # save model as class variable
             self.svr_model = svm_regres
@@ -329,6 +359,9 @@ class time_series_prediction():
             print('best_model: ', gsearch.best_estimator_)
             print('best_params: ',gsearch.best_params_)
 
+            # save best hyperparameters
+            self.svm_best_params = gsearch.best_params_
+
             # predict on test set
             svm_predictions = gsearch.best_estimator_.predict(self.X_test)
 
@@ -344,6 +377,8 @@ class time_series_prediction():
             # save predictions and results
             self.svm_predictions = svm_predictions
             self.svm_rmse = np.sqrt(mse)
+            self.svm_mape = mape
+            self.svm_mae = mae
 
             # save model as class variable
             self.svr_model = gsearch.best_estimator_
@@ -378,6 +413,8 @@ class time_series_prediction():
             # save predictions
             self.neural_net_predictions = nn_predictions
             self.nn_rmse = np.sqrt(mse)
+            self.nn_mape = mape
+            self.nn_mae = mae
 
             # save loss-curve
             if solver != 'lbfgs':
@@ -404,6 +441,9 @@ class time_series_prediction():
             # save grid search parameters
             self.nn_grid_params = pd.DataFrame.from_dict(gsearch.cv_results_)
 
+            # save grid search best params
+            self.nn_best_params = gsearch.best_params_
+
             # model
             mlp_predictions = gsearch.best_estimator_.predict(self.X_test)
 
@@ -419,6 +459,8 @@ class time_series_prediction():
              # save predictions
             self.neural_net_predictions = mlp_predictions
             self.nn_rmse = np.sqrt(mse)
+            self.nn_mape = mape
+            self.nn_mae = mae
 
             # save loss-curve
             self.nn_loss_curve = gsearch.best_estimator_.loss_curve_
@@ -484,6 +526,8 @@ class time_series_prediction():
              # save predictions
             self.lstm_predictions = lstm_predictions
             self.lstm_rmse = np.sqrt(mse)
+            self.lstm_mape = mape
+            self.lstm_mae = mae
 
             # save loss-curve
             self.lstm_loss_curve = history
@@ -541,10 +585,17 @@ class time_series_prediction():
             # start tuning hyperparameters
             tuner.search(X_train, Y_train, epochs=5, validation_data=(X_val, Y_val))
 
+            # setup retraining callbacks
+            callbacks_list = [EarlyStopping(verbose=1,monitor='loss',mode='min',patience=20)]
+            
             # retrieve and build best LSTM model
-            best_hp = tuner.get_best_hyperparameters()[0]
-            model = tuner.hypermodel.build(best_hp)
-            history = model.fit(best_hp, model, self.X_train, self.y_train)
+            best_hp = tuner.get_best_hyperparameters(1)
+            print(f'Best LSTM hyperparamteres: {best_hp[0]}')
+            model = build_model(best_hp[0])
+            history = model.fit(self.X_train, self.y_train, epochs=n_epochs, batch_size=n_batch, verbose=verbose, callbacks=callbacks_list)
+
+            # save best parameters
+            self.lstm_best_params = best_hp[0]
 
             # test set preidictions
             lstm_predictions = model.predict(self.X_test)
@@ -559,9 +610,11 @@ class time_series_prediction():
             print('RMSE: ',np.sqrt(mse))
             print('MAE: ',mae)
 
-             # save predictions
+            # save predictions
             self.lstm_predictions = lstm_predictions
             self.lstm_rmse = np.sqrt(mse)
+            self.lstm_mape = mape
+            self.lstm_mae = mae
 
             # save loss-curve
             self.lstm_loss_curve = history
@@ -587,9 +640,11 @@ class time_series_prediction():
         # save predictions and results
         self.naive_predictions = preds
         self.naive_rmse = np.sqrt(mse)
+        self.naive_mape = mape
+        self.naive_mae = mae
         
 # ****************************************************************************************************************
-    # visualize results
+# visualize results
 # ****************************************************************************************************************
     def error(self,real_data,predicted_data):
         error = np.zeros(len(real_data))
@@ -668,12 +723,13 @@ class time_series_prediction():
             ax[1].legend()
 
         # titles and save figures
-        # title_string = 'S&P500 predictions _ y is '+str(column)+'_ window len is '+ str(window_length)
-        # fig.suptitle(title_string)
+        title_string = self.name
+        fig.suptitle(title_string)
         
-        # fig_name = '../results/univariate_single_step_ahead/'+title_string+'.png'
-        # plt.savefig(fig_name,facecolor='w')
+        fig_name = './results/univariate_single_step_ahead/'+title_string+'.png'
         plt.tight_layout()
+        plt.savefig(fig_name,facecolor='w')
+        
 
     # visualize predictions against real values using scatter plot
     def vis_results_scatter(self):
@@ -713,8 +769,12 @@ class time_series_prediction():
         ax.set_ylabel(ylabel)
         plt.tight_layout()
 
+    
+# ****************************************************************************************************************
+# collect results
+# ****************************************************************************************************************   
     # method to tabulate all results together nicely
-    def results(self):
+    def collect_results(self):
         """
         This function neatly collects the prediction data into a single dataframe        
         """
@@ -747,7 +807,52 @@ class time_series_prediction():
             df_results['LSTM'] = lstm_predictions
         df_results['Naive'] = naive_predictions
         
-        return df_results
+        self.results = df_results
+
+    # method to tabulate all final results neatly
+    def conclusion(self):
+        """
+        This method collects all results in a neat to display and easy to read table.
+        """
+
+        # compute directional accuracy
+        dates = self.results['date'].iloc[self.training_split+self.lag_window_length:]
+        original_values = self.results['Value'].iloc[self.training_split+self.lag_window_length:]
+        lin_predictions = self.results['Linear'].iloc[self.training_split+self.lag_window_length:]
+        svm_predictions = self.results['SVM'].iloc[self.training_split+self.lag_window_length:]
+        nn_predictions =  self.results['NN'].iloc[self.training_split+self.lag_window_length:]
+        naive_predictions =  self.results['Naive'].iloc[self.training_split+self.lag_window_length:]
+        lstm_predictions = self.results['LSTM'].iloc[self.training_split+self.lag_window_length:]
+
+        # hit rate calculations
+        df_lin, lin_accuracy = hit_rate(dates,original_values,lin_predictions)
+        df_svm, svm_accuracy = hit_rate(dates,original_values,svm_predictions)
+        df_nn, nn_accuracy = hit_rate(dates,original_values,nn_predictions)
+        df_naive, naive_accuracy = hit_rate(dates,original_values,naive_predictions)
+        df_lstm, lstm_accuracy = hit_rate(dates,original_values,lstm_predictions)
+    
+
+        # rows defined as dictionaries
+        naive = {'model':'Naive','RMSE':self.naive_rmse,'MAE':self.naive_mae,'MAPE':self.naive_mape,'DA':naive_accuracy,'parameters':None}
+        linear = {'model':'Linear Regression','RMSE':self.linear_reg_rmse,'MAE':self.linear_reg_mae,'MAPE':self.linear_reg_mape,'DA':lin_accuracy,'parameters':None}
+        svr = {'model':'SVM','RMSE':self.svm_rmse,'MAE':self.svm_mae,'MAPE':self.svm_mape,'DA':svm_accuracy,'parameters':self.svm_best_params}
+        mlp = {'model':'MLP','RMSE':self.nn_rmse,'MAE':self.nn_mae,'MAPE':self.nn_mape,'DA':nn_accuracy,'parameters':self.nn_best_params}
+        lstm = {'model':'LSTM','RMSE':self.lstm_rmse,'MAE':self.lstm_mae,'MAPE':self.lstm_mape,'DA':lstm_accuracy,'parameters':self.lstm_best_params}
+
+        # place into df
+        df_conclusion = pd.DataFrame.from_records([linear,svr,mlp,lstm])
+
+        # print nicely
+        print(tabulate(df_conclusion, headers='keys', tablefmt="psql"))
+
+        # save evaluation results nicely
+        df_conclusion.to_csv(f'./results/univariate_single_step_ahead/{self.name}_results_summary.csv')
+
+        # save evaluation results nicely to latex table
+        latex_table = tabulate(df_conclusion, headers='keys', tablefmt="latex_longtable")
+        with open(f'./results/univariate_single_step_ahead/{self.name}_latex_table.txt',"w") as my_latex_table:
+            my_latex_table.write(latex_table)
+
 
 
 
