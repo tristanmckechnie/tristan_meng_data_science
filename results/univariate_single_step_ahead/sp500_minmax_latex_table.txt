@@ -1,11 +1,12 @@
 \begin{longtable}{rlrrrrl}
 \hline
-    & model             &      RMSE &         MAE &        MAPE &       DA & parameters                                                                                                      \\
+    & model             &      RMSE &       MAE &      MAPE &       DA & parameters                                                                                                        \\
 \hline
 \endhead
-  0 & Linear Regression & 0.0323763 &   0.0221695 &   0.0226341 & 0.455034 &                                                                                                                 \\
-  1 & Linear Regression & 0.0901368 &   0.0817907 &   0.0686329 & 0.46443  & \{'C': 1, 'kernel': 'linear'\}                                                                                    \\
-  2 & Linear Regression & 0.0632483 & nan         & nan         & 0.472483 & \{'activation': 'tanh', 'hidden\_layer\_sizes': (1000,), 'learning\_rate': 'adaptive', 'learning\_rate\_init': 0.001\} \\
-  3 & Linear Regression & 0.127358  &   0.0877246 &   0.0605435 & 0.451007 &                                                                                                                 \\
+  0 & Naive             & 0.0329541 & 0.0223259 & 0.022903  & 0.448322 &                                                                                                                   \\
+  1 & Linear Regression & 0.0323763 & 0.0221695 & 0.0226341 & 0.455034 &                                                                                                                   \\
+  2 & SVM               & 0.0901368 & 0.0817907 & 0.0686329 & 0.46443  & \{'C': 1, 'kernel': 'linear'\}                                                                                      \\
+  3 & MLP               & 0.0645339 & 0.0524143 & 0.0442474 & 0.467785 & \{'activation': 'tanh', 'hidden\_layer\_sizes': (1000,), 'learning\_rate': 'invscaling', 'learning\_rate\_init': 0.001\} \\
+  4 & LSTM              & 0.048311  & 0.0391569 & 0.0346939 & 0.455034 &                                                                                                                   \\
 \hline
 \end{longtable}

@@ -274,7 +274,7 @@ class time_series_prediction():
             df_walk_forward['real_value'] = history
             df_walk_forward['prediction'] = predictions
 
-            return df_walk_forward, df
+            return df_walk_forward, df, mse,mae,mape,accuracy
 
         else:
             print('Not a whole number of walks!') 
@@ -595,7 +595,7 @@ class time_series_prediction():
             history = model.fit(self.X_train, self.y_train, epochs=n_epochs, batch_size=n_batch, verbose=verbose, callbacks=callbacks_list)
 
             # save best parameters
-            self.lstm_best_params = best_hp[0]
+            self.lstm_best_params = model.summary()
 
             # test set preidictions
             lstm_predictions = model.predict(self.X_test)
@@ -840,7 +840,7 @@ class time_series_prediction():
         lstm = {'model':'LSTM','RMSE':self.lstm_rmse,'MAE':self.lstm_mae,'MAPE':self.lstm_mape,'DA':lstm_accuracy,'parameters':self.lstm_best_params}
 
         # place into df
-        df_conclusion = pd.DataFrame.from_records([linear,svr,mlp,lstm])
+        df_conclusion = pd.DataFrame.from_records([naive,linear,svr,mlp,lstm])
 
         # print nicely
         print(tabulate(df_conclusion, headers='keys', tablefmt="psql"))
