@@ -40,10 +40,11 @@ from tabulate import tabulate
 # class for one-dimensional time series forecasting
 class time_series_prediction():
 
-    def __init__(self,name,dates,one_d_time_series,lag_window_length,n_ahead_prediction):
+    def __init__(self,financial_asset,feat_engineering,dates,one_d_time_series,lag_window_length,n_ahead_prediction):
 
         # forecasting run name - typically named for the asset class + feature engineering type
-        self.name = name
+        self.financial_asset = financial_asset
+        self.feat_engineering = feat_engineering
 
         # raw input data + settings for time series -> supervised learning ML problem
         self.one_d_time_series = one_d_time_series #np.array(one_d_time_series)      # time series array, to array ensure index works as expected for class methods
@@ -723,10 +724,10 @@ class time_series_prediction():
             ax[1].legend()
 
         # titles and save figures
-        title_string = self.name
+        title_string =  self.financial_asset + '_' + self.feat_engineering
         fig.suptitle(title_string)
         
-        fig_name = './results/univariate_single_step_ahead/'+title_string+'.png'
+        fig_name = f'./results/univariate_single_step_ahead/{self.feat_engineering}/{title_string}.png'
         plt.tight_layout()
         plt.savefig(fig_name,facecolor='w')
         
@@ -846,11 +847,11 @@ class time_series_prediction():
         print(tabulate(df_conclusion, headers='keys', tablefmt="psql"))
 
         # save evaluation results nicely
-        df_conclusion.to_csv(f'./results/univariate_single_step_ahead/{self.name}_results_summary.csv')
+        df_conclusion.to_csv(f'./results/univariate_single_step_ahead/{self.feat_engineering}/{self.financial_asset}_results_summary.csv')
 
         # save evaluation results nicely to latex table
         latex_table = tabulate(df_conclusion, headers='keys', tablefmt="latex_longtable")
-        with open(f'./results/univariate_single_step_ahead/{self.name}_latex_table.txt',"w") as my_latex_table:
+        with open(f'./results/univariate_single_step_ahead/{self.feat_engineering}/{self.financial_asset}_latex_table.txt',"w") as my_latex_table:
             my_latex_table.write(latex_table)
 
 
@@ -898,6 +899,9 @@ def hit_rate(dates,original_values, predictions): # pass lists / arrays of dates
     return df, accuracy
 
 def invert_scaling(scaler,testing_data,predictions):
+    """
+    This function inverts the scaling applied to a dataset.
+    """
     # invert scaling
     inverted_predictions = scaler.inverse_transform(predictions.reshape(-1, 1))
     inverted_testing_data = scaler.inverse_transform(testing_data.reshape(-1, 1))
@@ -946,8 +950,8 @@ def invert_first_difference_with_log(prediction_split,lag_window,predictions,df_
 
 def invert_first_difference(prediction_split,lag_window,predictions,df_original):
     # first real value to work from
-    beginnning_value = df_original['#Passengers'].iloc[-prediction_split]
-    beginning_date = df_original['Month'].iloc[-prediction_split]
+    beginnning_value = df_original['Close'].iloc[-prediction_split]
+    beginning_date = df_original['Date'].iloc[-prediction_split]
     print(f'Beginning: {beginnning_value} at date: {beginning_date}')
 
     # determined predicted values
@@ -969,8 +973,30 @@ def invert_first_difference(prediction_split,lag_window,predictions,df_original)
 
     # tabulate
     df_results = pd.DataFrame(columns=['Date','Value','Pred Value'])
-    df_results['Month'] = df_original['Month']
-    df_results['Value'] = df_original['#Passengers']
+    df_results['Date'] = df_original['Date']
+    df_results['Value'] = df_original['Close']
     df_results['Pred Value'] = inverted_predictions
+
+    return df_results
+
+def invert_first_difference_2(first_value,predictions,original,dates):
+
+    # determined predicted values
+    count = 0
+    previous_value = first_value
+    inverted = []
+    for i in range(len(predictions)):
+        real_value = previous_value + predictions[i]
+        if type(real_value) == list:
+            inverted.extend(real_value)
+        else: 
+            inverted.append(real_value)
+        previous_value = real_value
+
+    # tabulate
+    df_results = pd.DataFrame(columns=['Date','value','invert_pred_value'])
+    df_results['Date'] = dates
+    df_results['value'] = original
+    df_results['invert_pred_value'] = inverted
 
     return df_results

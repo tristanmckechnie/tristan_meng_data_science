@@ -1,0 +1,12 @@
+\begin{longtable}{rlrrrrl}
+\hline
+    & model             &      RMSE &       MAE &     MAPE &       DA & parameters                                                                                                                     \\
+\hline
+\endhead
+  0 & Naive             & 0.113492  & 0.0887446 & 0.220671 & 0.430201 &                                                                                                                                \\
+  1 & Linear Regression & 0.0826158 & 0.0626774 & 0.169401 & 0.538926 &                                                                                                                                \\
+  2 & SVM               & 0.0824216 & 0.0625539 & 0.168544 & 0.477181 & \{'C': 100, 'kernel': 'sigmoid'\}                                                                                                \\
+  3 & MLP               & 0.0822365 & 0.0623571 & 0.169159 & 0.527517 & \{'activation': 'logistic', 'hidden\_layer\_sizes': (100, 100, 100), 'learning\_rate': 'invscaling', 'learning\_rate\_init': 0.0001\} \\
+  4 & LSTM              & 0.0822903 & 0.0624329 & 0.171988 & 0.472483 &                                                                                                                                \\
+\hline
+\end{longtable}

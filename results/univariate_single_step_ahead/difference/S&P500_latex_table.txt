@@ -1,0 +1,12 @@
+\begin{longtable}{rlrrrrl}
+\hline
+    & model             &     RMSE &      MAE &     MAPE &       DA & parameters                                                                                                                  \\
+\hline
+\endhead
+  0 & Naive             & 0.342883 & 0.221128 & 1.02797  & 0.463758 &                                                                                                                             \\
+  1 & Linear Regression & 0.21323  & 0.14599  & 0.956677 & 0.518792 &                                                                                                                             \\
+  2 & SVM               & 0.216929 & 0.146041 & 0.974137 & 0.519463 & \{'C': 0.001, 'kernel': 'rbf'\}                                                                                               \\
+  3 & MLP               & 0.216969 & 0.145131 & 0.993448 & 0.526846 & \{'activation': 'logistic', 'hidden\_layer\_sizes': (100, 100, 100), 'learning\_rate': 'constant', 'learning\_rate\_init': 0.001\} \\
+  4 & LSTM              & 0.96923  & 0.241348 & 1.40812  & 0.519463 &                                                                                                                             \\
+\hline
+\end{longtable}
