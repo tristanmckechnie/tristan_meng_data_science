@@ -32,6 +32,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import LSTM
 from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.utils import plot_model
 import keras_tuner as kt
 
 # pretty terminal print
@@ -464,7 +465,8 @@ class time_series_prediction():
             self.nn_mae = mae
 
             # save loss-curve
-            self.nn_loss_curve = gsearch.best_estimator_.loss_curve_
+            if solver != 'lbfgs':
+                self.nn_loss_curve = gsearch.best_estimator_.loss_curve_
 
             # save model as class attribute
             self.mlp_model = gsearch.best_estimator_
@@ -508,8 +510,14 @@ class time_series_prediction():
             # setup some callbacks
             callbacks_list = [EarlyStopping(verbose=1,monitor='loss',mode='min',patience=20)]
 
+            # create validation sets
+            X_train = self.X_train
+            Y_train = self.y_train
+
+            X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.1, random_state=1, shuffle=False)
+
             # fit model
-            history = model.fit(self.X_train, self.y_train, epochs=n_epochs, batch_size=n_batch, verbose=verbose, callbacks=callbacks_list)
+            history = model.fit(X_train, Y_train, validation_data=(X_val, Y_val), epochs=n_epochs, batch_size=n_batch, verbose=verbose, callbacks=callbacks_list)
             
             # test set preidictions
             lstm_predictions = model.predict(self.X_test)
@@ -538,6 +546,19 @@ class time_series_prediction():
 
             # save model as class attribute
             self.lstm_model = model
+
+            plot_model(
+            model,
+            to_file=f'./results/univariate_single_step_ahead/{self.feat_engineering}/{self.financial_asset}_best_lstm.png',
+            show_shapes=True,
+            show_dtype=False,
+            show_layer_names=True,
+            rankdir='LR',
+            expand_nested=True,
+            dpi=96,
+            layer_range=None,
+            show_layer_activations=True
+            )
 
         elif model_tunning == True:
 
@@ -622,6 +643,20 @@ class time_series_prediction():
 
             # save model as class attribute
             self.lstm_model = model
+
+            # save pic of best lstm model
+            plot_model(
+            model,
+            to_file=f'./results/univariate_single_step_ahead/{self.feat_engineering}/{self.financial_asset}_best_lstm.png',
+            show_shapes=True,
+            show_dtype=False,
+            show_layer_names=True,
+            rankdir='LR',
+            expand_nested=True,
+            dpi=96,
+            layer_range=None,
+            show_layer_activations=True
+            )
 
 
     def naive_model(self): # t's prediction is t-1's value, note that this means you miss the first time point
@@ -946,6 +981,29 @@ def invert_first_difference_with_log(prediction_split,lag_window,predictions,df_
     df_results['Value'] = df_original['#Passengers']
     df_results['Pred Value'] = inverted_predictions
     df_results['Pred Value'][-prediction_split:].apply(lambda x: np.exp(x)) # inverting the log
+    return df_results
+
+def invert_first_difference_with_log_2(first_value,predictions,original,dates):
+    
+    # invert differencing
+    count = 0
+    previous_value = first_value
+    inverted = []
+    for i in range(len(predictions)):
+        real_value = previous_value + predictions[i]
+        if type(real_value) == list:
+            inverted.extend(real_value)
+        else: 
+            inverted.append(real_value)
+        previous_value = real_value
+
+    # tabulate
+    df_results = pd.DataFrame(columns=['Date','value','invert_pred_value'])
+    df_results['Date'] = dates
+    df_results['value'] = original
+    df_results['diff_inverted'] = inverted
+    df_results['invert_pred_value'] = df_results['diff_inverted'].apply(lambda x: np.exp(x)) # this is log and difference inverted
+
     return df_results
 
 def invert_first_difference(prediction_split,lag_window,predictions,df_original):
