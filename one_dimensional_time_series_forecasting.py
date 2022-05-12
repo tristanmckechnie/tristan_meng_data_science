@@ -471,7 +471,7 @@ class time_series_prediction():
             # save model as class attribute
             self.mlp_model = gsearch.best_estimator_
 
-    def lstm(self,model_tunning=True, n_nodes=[128,128,128], n_lstm_layers=3, n_epochs=2000, n_batch=128,verbose=1):
+    def lstm(self,model_tunning=True, n_nodes=[128,128,128], n_lstm_layers=3, n_epochs=2000, n_batch=64,verbose=1):
         """
         This function trains a keras lstm neural network. Some important parameters are:
 
