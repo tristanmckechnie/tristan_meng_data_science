@@ -70,8 +70,8 @@ def find_threshold(signal):
     # test if this component is white noise
     white_noise_1_0,percentage = test_for_white_noise(inverse_transform_noise)
 
-    if white_noise_1_0 == True:
-            print(f'Threshold found! Threshold: {threshold} Test: {percentage}') 
+    # if white_noise_1_0 == True:
+            # print(f'Threshold found! Threshold: {threshold} Test: {percentage}') 
 
     # while thresholding has not removed a purely white noise component
     while white_noise_1_0 != True:
@@ -84,8 +84,8 @@ def find_threshold(signal):
         # is this removed component white noise?
         white_noise_1_0, percentage = test_for_white_noise(inverse_transform_noise)
 
-        if white_noise_1_0 == True:
-            print(f'Threshold found! Threshold: {threshold} Test: {percentage}')
+        # if white_noise_1_0 == True:
+            # print(f'Threshold found! Threshold: {threshold} Test: {percentage}')
 
     # some white noise evidence
     fig,ax = plt.subplots(1,2,figsize=(10,5))
@@ -146,7 +146,13 @@ def automatic_fourier_denoising(signal, df, split):
     plt.tight_layout()
 
     # return denoised signal
-    return np.real(inverse_transform_filtered)
+    inverse_transform_filtered = np.real(inverse_transform_filtered)
+
+    # remove start and end spikes
+    inverse_transform_filtered[0:10] = signal[0:10]
+    inverse_transform_filtered[-10:] = signal[-10:]
+
+    return inverse_transform_filtered
 
 def automatic_fourier_denoising_wf(signal):
     """
@@ -171,4 +177,10 @@ def automatic_fourier_denoising_wf(signal):
     inverse_transform_filtered = ifft(fft_filtered_denoised)
 
     # return denoised signal
-    return np.real(inverse_transform_filtered)
+    inverse_transform_filtered = np.real(inverse_transform_filtered)
+
+    # remove start and end spikes
+    inverse_transform_filtered[0:10] = signal[0:10]
+    inverse_transform_filtered[-10:] = signal[-10:]
+
+    return inverse_transform_filtered

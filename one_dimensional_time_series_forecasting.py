@@ -238,9 +238,11 @@ class time_series_prediction():
                     if only_training == True:
                         # feature engineer
                         walk_dataset = transformer(walk_dataset[0:train_len])
+
                     else:
                         # feature engineer
                         walk_dataset = transformer(walk_dataset)
+
 
                 # series to supervised ml task
                 training_data, testing_data = self.series_to_supervised(walk_dataset)
