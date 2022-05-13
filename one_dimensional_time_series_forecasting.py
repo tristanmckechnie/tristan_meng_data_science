@@ -193,13 +193,15 @@ class time_series_prediction():
         return input_data, target_data
     
     # this method implements walk foward validation training and testing
-    def walk_forward_val(self,model_name,model,train_len=220,test_len=30,train_frequency=5):
+    def walk_forward_val(self,model_name,model,train_len=220,test_len=30,train_frequency=5, transformer=None,only_training=True):
         """
         This method implements a walk forward validation technique.
         param: model:     trained time series model  
         param: train_len: n number of training samples [0:n)
         param: test_len:  m number of testing samples [n:m]
         param: train_frequency: retrain model every f windows
+        param: transformer: this is a function used to feature engineer training data during walk forward validation
+        param: only_training: only feature engineer the training set during walk forward validation. Used for denosing, when we dont denoise the testing data.
         """
         
         # variables to hold results through time
@@ -230,6 +232,15 @@ class time_series_prediction():
 
                 # subset data to a single walk
                 walk_dataset = self.one_d_time_series[walk_start:walk_end]
+
+                # apply spectral denoising as feature engineering
+                if transformer is not None:
+                    if only_training == True:
+                        # feature engineer
+                        walk_dataset = transformer(walk_dataset[0:train_len])
+                    else:
+                        # feature engineer
+                        walk_dataset = transformer(walk_dataset)
 
                 # series to supervised ml task
                 training_data, testing_data = self.series_to_supervised(walk_dataset)

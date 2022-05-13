@@ -147,3 +147,28 @@ def automatic_fourier_denoising(signal, df, split):
 
     # return denoised signal
     return np.real(inverse_transform_filtered)
+
+def automatic_fourier_denoising_wf(signal):
+    """
+    This function is used for fourier denoising an univariate time series signal
+    during walk forward validation.
+
+    params: signal: one dimensional time series signal. Preferably a numpy array.
+    """
+
+    # step 1: Apply FFT and find threshold
+    white_noise_threshold = find_threshold(signal)
+
+    # step 2: Apply FFT and produce PSD
+    fft_coefficients = fft(signal)
+    n = len(signal)
+    freqs = fftfreq(signal.shape[0]) # x axis of amplitude vs frequency graphs
+    psd = np.abs(fft_coefficients)/n # psd is amplitude/N, psd or power spectrum density is the magnitude of the coefficients resulting from fourier transform
+
+    # step 3: Denoise time series signal with this threshold, also retrieve noise component
+    psd_indices = psd >  white_noise_threshold # mask the psd signal
+    fft_filtered_denoised = fft_coefficients*psd_indices
+    inverse_transform_filtered = ifft(fft_filtered_denoised)
+
+    # return denoised signal
+    return np.real(inverse_transform_filtered)
