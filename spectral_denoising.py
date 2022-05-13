@@ -6,6 +6,8 @@ from statsmodels.tsa.stattools import acf
 from scipy.fft import fft, ifft, fftfreq
 from pandas.plotting import autocorrelation_plot
 import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
 
 def test_for_white_noise(inverse_transform_noise):
     """
@@ -93,10 +95,14 @@ def find_threshold(signal):
 
     return threshold
 
-def automatic_fourier_denoising(signal):
+def automatic_fourier_denoising(signal, df, split):
 
     """
     This function implement automatic fourier denoising on a time series signal.
+
+    params: signal: one dimensional time series signal. Preferably a numpy array.
+    params: df: OHLC + Date dataframe
+    params: split: where the training - testing split happens. From the end. |------split<----|
     """
 
     # step 1: Apply FFT and find threshold
@@ -129,15 +135,15 @@ def automatic_fourier_denoising(signal):
 
     # step 4: denoising results
     fig,ax = plt.subplots(2,1,figsize=(10,5),sharex=True)
-    ax[0].plot(df['Date'][-2000:-split],signal,'-',label='Real data')
-    ax[0].plot(df['Date'][-2000:-split],inverse_transform_filtered,'-',label='Inverse fourier filtered')
-    ax[1].plot(df['Date'][-2000:-split],inverse_transform_noise,'-',label='Noise component')
+    ax[0].plot(df['Date'][:-split],signal,'-',label='Real data')
+    ax[0].plot(df['Date'][:-split],inverse_transform_filtered,'-',label='Inverse fourier filtered')
+    ax[1].plot(df['Date'][:-split],inverse_transform_noise,'-',label='Noise component')
     ax[0].legend()
     ax[1].legend()
     ax[0].set_title(f'Threshold = {white_noise_threshold}')
     ax[1].set_xlabel('Days',fontsize=15)
-    ax[1].set_xticks([df['Date'][-2000:].iloc[x] for x in range(0,len(df['Date'][-2000:-split]),150)])
+    ax[1].set_xticks([df['Date'][:].iloc[x] for x in range(0,len(df['Date'][:-split]),150)])
     plt.tight_layout()
 
     # return denoised signal
-    return inverse_transform_filtered
+    return np.real(inverse_transform_filtered)
