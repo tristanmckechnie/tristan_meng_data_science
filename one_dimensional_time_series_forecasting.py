@@ -193,7 +193,7 @@ class time_series_prediction():
         return input_data, target_data
     
     # this method implements walk foward validation training and testing
-    def walk_forward_val(self,model_name,model,train_len=220,test_len=30,train_frequency=5, transformer=None,only_training=True):
+    def walk_forward_val(self,model_name,model,train_len=220,test_len=30,train_frequency=5, transformer=None,only_training=True,verbose=False):
         """
         This method implements a walk forward validation technique.
         param: model:     trained time series model  
@@ -237,11 +237,11 @@ class time_series_prediction():
                 if transformer is not None:
                     if only_training == True:
                         # feature engineer
-                        walk_dataset = transformer(walk_dataset[0:train_len])
+                        walk_dataset = transformer(walk_dataset[0:train_len],threshold_override=False,threshold=0.5,verbose=verbose)
 
                     else:
                         # feature engineer
-                        walk_dataset = transformer(walk_dataset)
+                        walk_dataset = transformer(walk_dataset,threshold_override=False,threshold=0.5,verbose=verbose)
 
 
                 # series to supervised ml task

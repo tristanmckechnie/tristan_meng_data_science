@@ -37,14 +37,14 @@ def test_for_white_noise(inverse_transform_noise):
     precentage = (num_pos_in_crit+num_neg_in_crit)/len(acf_values) * 100
 
     complete = None
-    if precentage >= 85:
+    if precentage >= 90:
         complete = True
     else:
         complete = False
 
     return complete, precentage
 
-def find_threshold(signal):
+def find_threshold(signal, verbose=True):
     """
     This function is used to deterine what a good thresholding value is. It works by iterating
     through possible thresholding values until the noise component removed is found to be white
@@ -89,15 +89,16 @@ def find_threshold(signal):
         # if white_noise_1_0 == True:
             # print(f'Threshold found! Threshold: {threshold} Test: {percentage}')
 
-    # some white noise evidence
-    fig,ax = plt.subplots(1,2,figsize=(10,5))
-    sns.histplot(np.real(inverse_transform_noise[10:-10]),kde=True,ax=ax[0])
-    autocorrelation_plot(inverse_transform_noise[10:-10],ax=ax[1])
-    plt.tight_layout()
+    if verbose != False:
+        # some white noise evidence
+        fig,ax = plt.subplots(1,2,figsize=(10,5))
+        sns.histplot(np.real(inverse_transform_noise[10:-10]),kde=True,ax=ax[0])
+        autocorrelation_plot(inverse_transform_noise[10:-10],ax=ax[1])
+        plt.tight_layout()
 
     return threshold
 
-def automatic_fourier_denoising(signal, df, split):
+def automatic_fourier_denoising(signal, df, split,verbose=False):
 
     """
     This function implement automatic fourier denoising on a time series signal.
@@ -108,7 +109,7 @@ def automatic_fourier_denoising(signal, df, split):
     """
 
     # step 1: Apply FFT and find threshold
-    white_noise_threshold = find_threshold(signal)
+    white_noise_threshold = find_threshold(signal,verbose=verbose)
 
     # step 2: Apply FFT and produce PSD
     fft_coefficients = fft(signal)
@@ -156,7 +157,7 @@ def automatic_fourier_denoising(signal, df, split):
 
     return inverse_transform_filtered
 
-def automatic_fourier_denoising_wf(signal,threshold_override=False,threshold=0.5):
+def automatic_fourier_denoising_wf(signal,threshold_override=False,threshold=0.5,verbose=False):
     """
     This function is used for fourier denoising an univariate time series signal
     during walk forward validation.
@@ -166,7 +167,7 @@ def automatic_fourier_denoising_wf(signal,threshold_override=False,threshold=0.5
 
     # step 1: Apply FFT and find threshold
     if threshold_override == False:
-        white_noise_threshold = find_threshold(signal)
+        white_noise_threshold = find_threshold(signal,verbose=verbose)
     else:
         white_noise_threshold = threshold
 
@@ -190,7 +191,7 @@ def automatic_fourier_denoising_wf(signal,threshold_override=False,threshold=0.5
 
     return inverse_transform_filtered
 
-def find_wavelet_threshold(signal,wavelet='sym8'):
+def find_wavelet_threshold(signal,wavelet='sym8',verbose=False):
     """
     This function is used to deterine what a good thresholding value is. It works by iterating
     through possible thresholding values until the noise component removed is found to be white
@@ -200,7 +201,7 @@ def find_wavelet_threshold(signal,wavelet='sym8'):
    # Create wavelet object and define parameters
     w = pywt.Wavelet(wavelet) 
     maxlev = pywt.dwt_max_level(len(signal), w.dec_len)
-    threshold = 0.8 # Threshold for filtering coefficients as part of denoising, the higher this value the more coefficients you set to zero, ie more of the original signal you truncate away / denoise
+    threshold = 0.9 # Threshold for filtering coefficients as part of denoising, the higher this value the more coefficients you set to zero, ie more of the original signal you truncate away / denoise
 
     # Decompose into wavelet components, to the level selected:
     coeffs = pywt.wavedec(signal, w, level=maxlev) # multi-level decomposition
@@ -219,8 +220,8 @@ def find_wavelet_threshold(signal,wavelet='sym8'):
     # test if this component is white noise
     white_noise_1_0,percentage = test_for_white_noise(noise)
 
-    if white_noise_1_0 == True:
-            print(f'Threshold found! Threshold: {threshold} Test: {percentage}')
+    # if white_noise_1_0 == True:
+    print(f'Threshold found! Threshold: {threshold} Test: {percentage}')
 
     # while thresholding has not removed a purely white noise component
     while white_noise_1_0 != True:
@@ -238,18 +239,19 @@ def find_wavelet_threshold(signal,wavelet='sym8'):
         # is this removed component white noise?
         white_noise_1_0, percentage = test_for_white_noise(noise)
 
-        if white_noise_1_0 == True:
-            print(f'Threshold found! Threshold: {threshold} Test: {percentage}')
+        # if white_noise_1_0 == True:
+        print(f'Threshold found! Threshold: {threshold} Test: {percentage}')
 
     # some white noise evidence
-    fig,ax = plt.subplots(1,2,figsize=(10,5))
-    sns.histplot(np.real(noise),kde=True,ax=ax[0])
-    autocorrelation_plot(noise,ax=ax[1])
-    plt.tight_layout()
+    if verbose != False:
+        fig,ax = plt.subplots(1,2,figsize=(10,5))
+        sns.histplot(np.real(noise),kde=True,ax=ax[0])
+        autocorrelation_plot(noise,ax=ax[1])
+        plt.tight_layout()
 
     return threshold
 
-def automatic_wavelet_denoising(signal,df,split,wavelet='sym8',threshold_override=False,threshold=0.5):
+def automatic_wavelet_denoising(signal,df,split,wavelet='sym8',threshold_override=False,threshold=0.5,verbose=False):
     """
     This function is used for wavelet denoising an univariate time series signal
     during single out of sample.
@@ -261,9 +263,8 @@ def automatic_wavelet_denoising(signal,df,split,wavelet='sym8',threshold_overrid
     """
 
     # step 1: Apply FFT and find threshold
-    white_noise_threshold = find_wavelet_threshold(signal,wavelet='sym8')
     if threshold_override == False:
-        white_noise_threshold = find_wavelet_threshold(signal)
+        white_noise_threshold = find_wavelet_threshold(signal,wavelet=wavelet,verbose=verbose)
     else:
         white_noise_threshold = threshold
 
@@ -276,7 +277,7 @@ def automatic_wavelet_denoising(signal,df,split,wavelet='sym8',threshold_overrid
 
     # Threshold the wavelet coefficients for each scale / level, thereby removing noise.
     for i in range(1, len(coeffs)):
-        coeffs[i] = pywt.threshold(coeffs[i], white_noise_threshold*np.max(coeffs[i]),mode='hard')
+        coeffs[i] = pywt.threshold(coeffs[i], white_noise_threshold*np.max(coeffs[i]),mode='soft')
 
     # inverse transform coefficient to reconstruct time series signal, minus noise
     datarec = pywt.waverec(coeffs, w) # multi-level decomposition reconstruction
@@ -287,20 +288,28 @@ def automatic_wavelet_denoising(signal,df,split,wavelet='sym8',threshold_overrid
 
     # plot results
     fig, ax = plt.subplots(2,1,figsize=(15,5),sharex=True)
-    ax[0].plot(df['Date'], signal,label='Raw signal')
-    ax[0].plot(df['Date'], datarec,label="De-noised signal using wavelet techniques")
+    ax[0].plot(df['Date'][:-split], signal,label='Raw signal')
+    ax[0].plot(df['Date'][:-split], datarec,label="De-noised signal using wavelet techniques")
 
-    ax[1].plot(df['Date'], signal-datarec,label="Noise component")
+    ax[1].plot(df['Date'][:-split], signal-datarec,label="Noise component")
 
-    max = df.shape[0]
-    ax[1].set_xticks([df['Date'].iloc[x] for x in range(0,max,150)])
+    max = df.iloc[:-split,:].shape[0]
+    relevant_dates = df['Date'][:-split]
+    ax[1].set_xticks([relevant_dates.iloc[x] for x in range(0,max,150)])
     ax[0].legend()
     plt.tight_layout()
     plt.show()
 
+    if verbose != False and threshold_override==True:
+        noise = signal-datarec
+        fig,ax = plt.subplots(1,2,figsize=(10,5))
+        sns.histplot(np.real(noise),kde=True,ax=ax[0])
+        autocorrelation_plot(noise,ax=ax[1])
+        plt.tight_layout()
+
     return datarec
 
-def automatic_wavelet_denoising_wf(signal,wavelet='sym8',threshold_override=False,threshold=0.5):
+def automatic_wavelet_denoising_wf(signal,wavelet='sym8',threshold_override=False,threshold=0.5,verbose=False):
     """
     This function is used for wavelet denoising an univariate time series signal
     during walk forward validation.
@@ -310,7 +319,7 @@ def automatic_wavelet_denoising_wf(signal,wavelet='sym8',threshold_override=Fals
     """
 
     # step 1: Apply FFT and find threshold
-    white_noise_threshold = find_wavelet_threshold(signal,wavelet='sym8')
+    white_noise_threshold = find_wavelet_threshold(signal,wavelet='wavelet',verbose=verbose)
 
     # step 2: Apply wavelet decomposition
     w = pywt.Wavelet(wavelet) 
