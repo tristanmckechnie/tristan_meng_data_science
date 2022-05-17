@@ -193,20 +193,29 @@ class time_series_prediction():
         return input_data, target_data
     
     # this method implements walk foward validation training and testing
-    def walk_forward_val(self,model_name,model,train_len=220,test_len=30,train_frequency=5, transformer=None,only_training=True,verbose=False):
+    def walk_forward_val(self,model_name,model,original_series,train_len=220,test_len=30,train_frequency=5, transformer=None,only_training=True, **kwargs):
         """
         This method implements a walk forward validation technique.
         param: model:     trained time series model  
+        param: original_series: the original time series before soos feature engineered the training set portion.
         param: train_len: n number of training samples [0:n)
         param: test_len:  m number of testing samples [n:m]
         param: train_frequency: retrain model every f windows
         param: transformer: this is a function used to feature engineer training data during walk forward validation
         param: only_training: only feature engineer the training set during walk forward validation. Used for denosing, when we dont denoise the testing data.
+        param: feat_type: this is a string used to define what feature engineering will be happening.
+
+        Possible kwargs depending on type of feature engineering employed:
+            - verbose=False : for plotting stuff
+            - wavelet='sym8' : which wavelet to use for denoising
+            - threshold_overide: used when the users wants to set a predetermined threshold for denosing
+            - threshold: the threshold value the user wants to implement.
         """
         
         # variables to hold results through time
         predictions = list() # list of predictions through time
-        history = list()     # list of real values through time   
+        history = list()     # list of real values through time  
+        history_alt = list() # using different values tro track real through time 
 
         """
         importantly: these values throught time will run for dates: 0+lag_length --> -1 (ie last)
@@ -215,13 +224,14 @@ class time_series_prediction():
         # define walk forward parameters
         step_size = test_len                 # how many time steps forward the validation takes, = test_len ensures all timesteps are tested
         window_length = train_len + test_len # how many time steps in a single windows test-train dataset 
-
+        plt.figure()
+        plt.plot(original_series)
         # how many walk forward validation steps to take
-        num_walks = int((len(self.one_d_time_series)-train_len) / step_size)
+        num_walks = int((len(original_series)-train_len) / step_size)
         print(f'Taking {num_walks} walks during walk forward validation')
 
         # only perform walk forward val if there are a whole number of walks
-        if len(self.one_d_time_series) % step_size == 0:
+        if len(original_series) % step_size == 0:
 
             # loop through the forward walks
             for walk in range(num_walks):
@@ -231,25 +241,24 @@ class time_series_prediction():
                 walk_end = walk*step_size + window_length
 
                 # subset data to a single walk
-                walk_dataset = self.one_d_time_series[walk_start:walk_end]
+                walk_dataset = original_series[walk_start:walk_end]
 
-                # apply spectral denoising as feature engineering
+                # apply some feature engineering during walk forward validation
                 if transformer is not None:
                     if only_training == True:
-                        # feature engineer
-                        walk_dataset = transformer(walk_dataset[0:train_len],threshold_override=False,threshold=0.5,verbose=verbose)
-
+                        # feature engineer only training dataset
+                        walk_dataset = transformer(walk_dataset[0:train_len],**kwargs)#threshold_override=False,threshold=0.5,verbose=verbose)
                     else:
-                        # feature engineer
-                        walk_dataset = transformer(walk_dataset,threshold_override=False,threshold=0.5,verbose=verbose)
-
-
-                # series to supervised ml task
+                        # feature engineer entire dataset
+                        walk_dataset = transformer(walk_dataset,**kwargs)#threshold_override=False,threshold=0.5,verbose=verbose)
+###################################### this is where I think the kak is happening
+                # series to supervised ml task, training data is a matrix, testing data is a 1-d array for a univariate time series forecasting problem
                 training_data, testing_data = self.series_to_supervised(walk_dataset)
 
                 # test train split
                 X_train = training_data[0:-test_len,:]
                 X_test =  training_data[-test_len:,:]
+
                 y_train = testing_data[0:-test_len]
                 y_test =  testing_data[-test_len:]
 
@@ -267,7 +276,8 @@ class time_series_prediction():
                 # store results
                 predictions.extend(walk_preds)
                 history.extend(y_test)
-
+                history_alt.extend(original_series[walk_start+train_len:walk_end])
+#####################################
             print(f'len pred: ', len(predictions))
             print(f'len history: ', len(history))
             print(f'len dates: ', len(self.time_series_dates[train_len:]))
@@ -288,6 +298,7 @@ class time_series_prediction():
             df_walk_forward['date'] = self.time_series_dates[train_len:]
             df_walk_forward['real_value'] = history
             df_walk_forward['prediction'] = predictions
+            df_walk_forward['alt_real_value'] = history_alt
 
             return df_walk_forward, df, mse,mae,mape,accuracy
 

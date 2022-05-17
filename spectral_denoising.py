@@ -214,6 +214,12 @@ def find_wavelet_threshold(signal,wavelet='sym8',verbose=False):
     # inverse transform coefficient to reconstruct time series signal, minus noise
     datarec = pywt.waverec(coeffs_thresholded, w) # multi-level decomposition reconstruction
 
+    n_datarec = len(datarec)
+    n_signal = len(signal)
+
+    if n_datarec > n_signal:
+        datarec = datarec[0:n_signal]
+
     # noise component
     noise = signal - datarec
 
@@ -235,6 +241,13 @@ def find_wavelet_threshold(signal,wavelet='sym8',verbose=False):
 
         # inverse transform coefficient to reconstruct time series signal, minus noise
         datarec = pywt.waverec(coeffs_thresholded, w) # multi-level decomposition reconstruction
+        
+        n_datarec = len(datarec)
+        n_signal = len(signal)
+
+        if n_datarec > n_signal:
+            datarec = datarec[0:n_signal]
+
         noise = signal - datarec
         # is this removed component white noise?
         white_noise_1_0, percentage = test_for_white_noise(noise)
@@ -319,8 +332,10 @@ def automatic_wavelet_denoising_wf(signal,wavelet='sym8',threshold_override=Fals
     """
 
     # step 1: Apply FFT and find threshold
-    white_noise_threshold = find_wavelet_threshold(signal,wavelet='wavelet',verbose=verbose)
-
+    if threshold_override == False:
+        white_noise_threshold = find_wavelet_threshold(signal,wavelet=wavelet,verbose=verbose)
+    else:
+        white_noise_threshold = threshold
     # step 2: Apply wavelet decomposition
     w = pywt.Wavelet(wavelet) 
     maxlev = pywt.dwt_max_level(len(signal), w.dec_len)
