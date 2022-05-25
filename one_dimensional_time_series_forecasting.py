@@ -759,7 +759,7 @@ class time_series_prediction():
             ax[1].set_title('Error signal for predictive models')
             ax[1].set_xlabel('Dates')
             ax[1].legend()
-            # ax[1].set_ylim([-10,10])
+            ax[1].set_ylim([0,1])
             ax[1].set_xticks([self.time_series_dates[x] for x in range(-self.training_split,-1,steps)])
             ax[1].tick_params(rotation=30)
             ax[1].set_ylabel('Error')
@@ -1082,5 +1082,54 @@ def invert_first_difference_2(first_value,predictions,original,dates):
     df_results['invert_pred_value'] = inverted
 
     return df_results
+
+def inverted_conclusion(dates,original_values, linear_preds, svm_pred, nn_preds, lstm_preds,financial_asset,feat_engineer):
+    """
+    This method collects all results in a neat to display and easy to read table.
+    """
+
+    # hit rate calculations
+    df_lin, lin_accuracy = hit_rate(dates,original_values,linear_preds)
+    df_svm, svm_accuracy = hit_rate(dates,original_values,svm_pred)
+    df_nn, nn_accuracy = hit_rate(dates,original_values,nn_preds)
+    df_lstm, lstm_accuracy = hit_rate(dates,original_values,lstm_preds)
+
+    # other eval metrics
+    linear_reg_rmse = np.sqrt(mean_squared_error(original_values,linear_preds))
+    linear_reg_mae = mean_absolute_error(original_values,linear_preds)
+    linear_reg_mape = mean_absolute_percentage_error(original_values,linear_preds)
+
+    svm_rmse = np.sqrt(mean_squared_error(original_values,svm_pred))
+    svm_mae = mean_absolute_error(original_values,svm_pred)
+    svm_mape = mean_absolute_percentage_error(original_values,svm_pred)
+
+    nn_rmse = np.sqrt(mean_squared_error(original_values,nn_preds))
+    nn_mae = mean_absolute_error(original_values,nn_preds)
+    nn_mape = mean_absolute_percentage_error(original_values,nn_preds)
+
+    lstm_rmse = np.sqrt(mean_squared_error(original_values,lstm_preds))
+    lstm_mae = mean_absolute_error(original_values,lstm_preds)
+    lstm_mape = mean_absolute_percentage_error(original_values,lstm_preds)
+
+    # rows defined as dictionaries
+    linear = {'model':'Linear Regression','RMSE':linear_reg_rmse,'MAE':linear_reg_mae,'MAPE':linear_reg_mape,'DA':lin_accuracy}
+    svr = {'model':'SVM','RMSE':svm_rmse,'MAE':svm_mae,'MAPE':svm_mape,'DA':svm_accuracy}
+    mlp = {'model':'MLP','RMSE':nn_rmse,'MAE':nn_mae,'MAPE':nn_mape,'DA':nn_accuracy}
+    lstm = {'model':'LSTM','RMSE':lstm_rmse,'MAE':lstm_mae,'MAPE':lstm_mape,'DA':lstm_accuracy}
+
+    # place into df
+    df_conclusion = pd.DataFrame.from_records([linear,svr,mlp,lstm])
+
+    # print nicely
+    print(tabulate(df_conclusion, headers='keys', tablefmt="psql"))
+
+    # save evaluation results nicely
+    name = financial_asset + '_' + feat_engineer
+    df_conclusion.to_csv(f'./results/univariate_single_step_ahead/{feat_engineer}/{financial_asset}_results_summary_inverted.csv')
+
+    # save evaluation results nicely to latex table
+    latex_table = tabulate(df_conclusion, headers='keys', tablefmt="latex_longtable")
+    with open(f'./results/univariate_single_step_ahead/{feat_engineer}/{financial_asset}_latex_table_inverted.txt',"w") as my_latex_table:
+        my_latex_table.write(latex_table)
 
     

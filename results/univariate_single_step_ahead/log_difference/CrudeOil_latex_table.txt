@@ -1,12 +1,12 @@
 \begin{longtable}{rlrrrrl}
 \hline
-    & model             &    RMSE &      MAE &    MAPE &       DA & parameters   \\
+    & model             &    RMSE &      MAE &    MAPE &       DA & parameters                                                                                                           \\
 \hline
 \endhead
-  0 & Naive             & 2.1814  & 0.29356  & 1.11253 & 0.469799 &              \\
-  1 & Linear Regression & 1.24082 & 0.186096 & 1.01975 & 0.544966 &              \\
-  2 & SVM               & 1.23817 & 0.188976 & 1.06024 & 0.546309 &              \\
-  3 & MLP               & 2.68539 & 0.468489 & 1.55396 & 0.521477 &              \\
-  4 & LSTM              & 3.49978 & 0.378565 & 1.67197 & 0.528188 &              \\
+  0 & Naive             & 2.1814  & 0.29356  & 1.11253 & 0.469799 &                                                                                                                      \\
+  1 & Linear Regression & 1.24082 & 0.186096 & 1.01975 & 0.544966 &                                                                                                                      \\
+  2 & SVM               & 1.27978 & 0.180688 & 1.0554  & 0.536242 & \{'C': 0.001, 'kernel': 'linear'\}                                                                                     \\
+  3 & MLP               & 1.25074 & 0.182605 & 1.06019 & 0.542282 & \{'activation': 'logistic', 'hidden\_layer\_sizes': (1000,), 'learning\_rate': 'adaptive', 'learning\_rate\_init': 0.0001\} \\
+  4 & LSTM              & 1.28277 & 0.183019 & 1.03625 & 0.519463 &                                                                                                                      \\
 \hline
 \end{longtable}
