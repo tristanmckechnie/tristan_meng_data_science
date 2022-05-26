@@ -1,0 +1,12 @@
+\begin{longtable}{rlrrrrl}
+\hline
+    & model             &      RMSE &       MAE &      MAPE &       DA & parameters                                                                                                      \\
+\hline
+\endhead
+  0 & Naive             & 0.0141002 & 0.0106905 & 0.0405736 & 0.512752 &                                                                                                                 \\
+  1 & Linear Regression & 0.0168038 & 0.0129759 & 0.0481053 & 0.508725 &                                                                                                                 \\
+  2 & SVM               & 0.0359038 & 0.0291861 & 0.102531  & 0.512752 & \{'C': 0.1, 'kernel': 'linear'\}                                                                                  \\
+  3 & MLP               & 0.0250508 & 0.0209385 & 0.0746936 & 0.520134 & \{'activation': 'tanh', 'hidden\_layer\_sizes': (1000,), 'learning\_rate': 'constant', 'learning\_rate\_init': 0.001\} \\
+  4 & LSTM              & 0.0159572 & 0.0123687 & 0.0449075 & 0.510738 &                                                                                                                 \\
+\hline
+\end{longtable}
