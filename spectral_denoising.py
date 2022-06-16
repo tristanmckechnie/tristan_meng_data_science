@@ -145,7 +145,7 @@ def automatic_fourier_denoising(signal, df, split,verbose=False):
     ax[1].legend()
     ax[0].set_title(f'Threshold = {white_noise_threshold}')
     ax[1].set_xlabel('Days',fontsize=15)
-    ax[1].set_xticks([df['Date'][:].iloc[x] for x in range(0,len(df['Date'][:-split]),150)])
+    ax[1].set_xticks([df['Date'][:].iloc[x] for x in range(0,len(df['Date'][:-split]),200)], rotation=30)
     plt.tight_layout()
 
     # return denoised signal
