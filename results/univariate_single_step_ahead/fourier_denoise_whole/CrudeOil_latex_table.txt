@@ -6,7 +6,7 @@
   0 & Naive             & 0.00689879 & 0.00486037  & 0.0785327  & 0.613423 &                                                                                                                         \\
   1 & Linear Regression & 0.00494737 & 0.000979818 & 0.00481639 & 0.630201 &                                                                                                                         \\
   2 & SVM               & 0.0576591  & 0.0439207   & 0.714642   & 0.534899 & \{'C': 1, 'kernel': 'linear'\}                                                                                            \\
-  3 & MLP               & 0.0107935  & 0.0083705   & 0.0655128  & 0.59396  & \{'activation': 'tanh', 'hidden\_layer\_sizes': (100, 100, 100), 'learning\_rate': 'constant', 'learning\_rate\_init': 0.001\} \\
-  4 & LSTM              & 0.0202812  & 0.00808889  & 0.118323   & 0.610738 &                                                                                                                         \\
+  3 & MLP               & 0.0447879  & 0.0428932   & 0.443575   & 0.588591 & \{'activation': 'tanh', 'hidden\_layer\_sizes': (100, 100, 100), 'learning\_rate': 'adaptive', 'learning\_rate\_init': 0.001\} \\
+  4 & LSTM              & 0.0357304  & 0.0202066   & 0.247337   & 0.590604 &                                                                                                                         \\
 \hline
 \end{longtable}

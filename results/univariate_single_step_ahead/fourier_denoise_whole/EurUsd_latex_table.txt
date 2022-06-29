@@ -1,12 +1,12 @@
 \begin{longtable}{rlrrrrl}
 \hline
-    & model             &       RMSE &         MAE &       MAPE &       DA & parameters                                                                                                        \\
+    & model             &       RMSE &         MAE &       MAPE &       DA & parameters                                                                                                               \\
 \hline
 \endhead
-  0 & Naive             & 0.00470373 & 0.00344539  & 0.0140357  & 0.637584 &                                                                                                                   \\
-  1 & Linear Regression & 0.00268248 & 0.000759296 & 0.00306075 & 0.648993 &                                                                                                                   \\
-  2 & SVM               & 0.0270028  & 0.0210432   & 0.0919164  & 0.573154 & \{'C': 1, 'kernel': 'linear'\}                                                                                      \\
-  3 & MLP               & 0.00722206 & 0.00531164  & 0.0219821  & 0.624161 & \{'activation': 'tanh', 'hidden\_layer\_sizes': (1000,), 'learning\_rate': 'invscaling', 'learning\_rate\_init': 0.001\} \\
-  4 & LSTM              & 0.00257283 & 0.00139806  & 0.00558649 & 0.64698  &                                                                                                                   \\
+  0 & Naive             & 0.00470373 & 0.00344539  & 0.0140357  & 0.637584 &                                                                                                                          \\
+  1 & Linear Regression & 0.00268248 & 0.000759296 & 0.00306075 & 0.648993 &                                                                                                                          \\
+  2 & SVM               & 0.0270028  & 0.0210432   & 0.0919164  & 0.573154 & \{'C': 1, 'kernel': 'linear'\}                                                                                             \\
+  3 & MLP               & 0.0143489  & 0.0130815   & 0.048662   & 0.626846 & \{'activation': 'tanh', 'hidden\_layer\_sizes': (100, 100, 100), 'learning\_rate': 'invscaling', 'learning\_rate\_init': 0.01\} \\
+  4 & LSTM              & 0.00463323 & 0.00395575  & 0.0129177  & 0.64698  &                                                                                                                          \\
 \hline
 \end{longtable}
