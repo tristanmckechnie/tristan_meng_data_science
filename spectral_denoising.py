@@ -98,7 +98,7 @@ def find_threshold(signal, verbose=True):
 
     return threshold
 
-def automatic_fourier_denoising(signal, df, split,verbose=False):
+def automatic_fourier_denoising(signal, dates,verbose=False):
 
     """
     This function implement automatic fourier denoising on a time series signal.
@@ -138,14 +138,14 @@ def automatic_fourier_denoising(signal, df, split,verbose=False):
 
     # step 4: denoising results
     fig,ax = plt.subplots(2,1,figsize=(10,5),sharex=True)
-    ax[0].plot(df['Date'][:-split],signal,'-',label='Real data')
-    ax[0].plot(df['Date'][:-split],inverse_transform_filtered,'-',label='Inverse fourier filtered')
-    ax[1].plot(df['Date'][:-split],inverse_transform_noise,'-',label='Noise component')
+    ax[0].plot(dates,signal,'-',label='Real data')
+    ax[0].plot(dates,inverse_transform_filtered,'-',label='Inverse fourier filtered')
+    ax[1].plot(dates,inverse_transform_noise,'-',label='Noise component')
     ax[0].legend()
     ax[1].legend()
     ax[0].set_title(f'Threshold = {white_noise_threshold}')
     ax[1].set_xlabel('Days',fontsize=15)
-    ax[1].set_xticks([df['Date'][:].iloc[x] for x in range(0,len(df['Date'][:-split]),200)], rotation=30)
+    ax[1].set_xticks([dates.iloc[x] for x in range(0,len(dates),200)], rotation=30)
     plt.tight_layout()
 
     # return denoised signal

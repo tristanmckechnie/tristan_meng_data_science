@@ -1,0 +1,11 @@
+\begin{longtable}{rlrrrr}
+\hline
+    & model     &         mse &       mae &     mape &   accuracy \\
+\hline
+\endhead
+  0 & LinearReg & 0.000772899 & 0.0188148 & 0.133268 &   0.483944 \\
+  1 & svr       & 0.0307444   & 0.148251  & 1.14747  &   0.498028 \\
+  2 & MLP       & 0.00161293  & 0.0271457 & 0.182353 &   0.497465 \\
+  3 & LSTM      & 0.0691335   & 0.22361   & 1.61444  &   0.533521 \\
+\hline
+\end{longtable}
