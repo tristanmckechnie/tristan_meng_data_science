@@ -1,0 +1,12 @@
+\begin{longtable}{rlrrrrl}
+\hline
+    & model             &     RMSE &      MAE &     MAPE &       DA & parameters   \\
+\hline
+\endhead
+  0 & Naive             & 0.139842 & 0.119511 & 0.118094 & 0.488889 &              \\
+  1 & Linear Regression & 0.125988 & 0.100669 & 0.0967   & 0.488889 &              \\
+  2 & SVM               & 0.132898 & 0.114213 & 0.112995 & 0.477778 &              \\
+  3 & MLP               & 0.140189 & 0.112017 & 0.111946 & 0.533333 &              \\
+  4 & LSTM              & 0.240378 & 0.193211 & 0.18391  & 0.388889 &              \\
+\hline
+\end{longtable}
