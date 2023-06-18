@@ -5,11 +5,9 @@ This repository contains the work for my MEng mini-thesis. The project investiga
 ## Description repo
 
 ### Description of folders:
-- docs: version control for latex thesis drafts.
 - misc code: old code, shared code or just useful snippets found during research. 
 - old playground notebooks: messy jupyter notebooks used to trial new ideas or first attempt to develop various models and techniques. 
 - pics: a place to save result figures.
-- research: useful research docs to refer to during modelling.
 - results: a place to save forecasting results.
 - test data: example data used for the project
 
